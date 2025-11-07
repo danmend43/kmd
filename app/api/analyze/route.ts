@@ -485,7 +485,7 @@ async function extractProfileData(url: string, retryCount: number = 0): Promise<
       ]
       
       for (const { pattern, type } of hiddenPatterns) {
-        const matches = [...fullText.matchAll(pattern)]
+        const matches = Array.from(fullText.matchAll(pattern))
         for (const match of matches) {
           if (match[1] && isValidNumber(match[1])) {
             const value = normalizeNumber(match[1])
