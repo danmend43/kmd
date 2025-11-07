@@ -10,7 +10,7 @@ const calendarFilePath = path.join(process.cwd(), 'public', 'calendar-data.json'
 export async function GET(request: NextRequest) {
   const auth = verifyAuth(request)
   if (!auth.authenticated) {
-    return auth.response!
+    return auth.response || NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
   }
   try {
     if (!existsSync(calendarFilePath)) {
@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const auth = verifyAuth(request)
   if (!auth.authenticated) {
-    return auth.response!
+    return auth.response || NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
   }
 
   try {

@@ -151,7 +151,12 @@ async function extractProfileData(url: string, retryCount: number = 0): Promise<
 
     // ESTRATÉGIA 1: Meta Tags Open Graph
     profileData.displayName = $('meta[property="og:title"]').attr('content') || ''
-    profileData.avatar = $('meta[property="og:image"]').attr('content') || ''
+    let avatarUrl = $('meta[property="og:image"]').attr('content') || ''
+    // Garantir HTTPS
+    if (avatarUrl && avatarUrl.startsWith('http://')) {
+      avatarUrl = avatarUrl.replace('http://', 'https://')
+    }
+    profileData.avatar = avatarUrl
     const metaDescription = $('meta[property="og:description"]').attr('content') || $('meta[name="description"]').attr('content') || ''
     profileData.bio = metaDescription
 
@@ -328,9 +333,14 @@ async function extractProfileData(url: string, retryCount: number = 0): Promise<
                   }
                 }
 
-                profileData.avatar = profileData.avatar || userData.avatar || userData.avatarUrl || 
+                let avatarFromJson = profileData.avatar || userData.avatar || userData.avatarUrl || 
                                    userData.profilePic || userData.headUrl || userData.head ||
                                    userData.profile_image || userData.image || userData.picture || ''
+                // Garantir HTTPS
+                if (avatarFromJson && avatarFromJson.startsWith('http://')) {
+                  avatarFromJson = avatarFromJson.replace('http://', 'https://')
+                }
+                profileData.avatar = avatarFromJson
                 
                 profileData.displayName = profileData.displayName || userData.nickname || userData.name || 
                                           userData.displayName || userData.userName || userData.username ||
@@ -447,8 +457,12 @@ async function extractProfileData(url: string, retryCount: number = 0): Promise<
       
       for (const selector of avatarSelectors) {
         const img = $(selector).first()
-        const src = img.attr('src') || img.attr('data-src') || img.attr('data-lazy-src') || ''
+        let src = img.attr('src') || img.attr('data-src') || img.attr('data-lazy-src') || ''
         if (src && src.includes('http')) {
+          // Garantir que a URL seja HTTPS
+          if (src.startsWith('http://')) {
+            src = src.replace('http://', 'https://')
+          }
           profileData.avatar = src
           break
         }

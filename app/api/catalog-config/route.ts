@@ -49,7 +49,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   const auth = verifyAuth(request)
   if (!auth.authenticated) {
-    return auth.response!
+    return auth.response || NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
   }
 
   try {
@@ -146,7 +146,7 @@ export async function POST(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   const auth = verifyAuth(request)
   if (!auth.authenticated) {
-    return auth.response!
+    return auth.response || NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
   }
 
   try {
