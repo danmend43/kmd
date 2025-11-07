@@ -219,6 +219,7 @@ export default function Home() {
   })
   const [catalogLink, setCatalogLink] = useState<string>('')
   const [catalogs, setCatalogs] = useState<Array<{ link: string, number: string, name: string, expirationMinutes: number, expiresAt: string, createdAt: string, active: boolean }>>([])
+  const [htmlCatalogs, setHtmlCatalogs] = useState<Array<{ filename: string, link: string, createdAt: string, modifiedAt: string, size: number }>>([])
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null)
   const [dailyPostingGroup, setDailyPostingGroup] = useState<string | null>(null) // Grupo selecionado na postagem do dia
   const [dailyPosting, setDailyPosting] = useState<{ [key: string]: { selected: string[], startTime?: string, endTime?: string, completed?: boolean, selectedGroup?: string } }>({})
@@ -2731,6 +2732,19 @@ export default function Home() {
                             })
                             setCatalogs(activeCatalogs)
                           }
+                          
+                          // Recarregar lista de HTMLs
+                          try {
+                            const htmlResponse = await fetch('/api/catalogs/list')
+                            if (htmlResponse.ok) {
+                              const htmlData = await htmlResponse.json()
+                              if (htmlData.files) {
+                                setHtmlCatalogs(htmlData.files)
+                              }
+                            }
+                          } catch (e) {
+                            console.error('Erro ao recarregar HTMLs:', e)
+                          }
                         }
                       } catch (e) {
                         console.error('Erro ao criar catálogo:', e)
@@ -2841,6 +2855,87 @@ export default function Home() {
                             >
                               🗑️ Remover
                             </button>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {htmlCatalogs.length > 0 && (
+                  <div className="mt-8 pt-6 border-t border-gray-200">
+                    <h3 className="text-lg font-bold text-gray-800 mb-4">📄 Páginas HTML de Catálogos</h3>
+                    <div className="space-y-3">
+                      {htmlCatalogs.map((htmlCatalog) => {
+                        const createdAt = new Date(htmlCatalog.createdAt)
+                        const formattedDate = createdAt.toLocaleString('pt-BR', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })
+                        
+                        return (
+                          <div
+                            key={htmlCatalog.link}
+                            className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg hover:shadow-md transition-all"
+                          >
+                            <div className="flex-1">
+                              <div className="font-semibold text-gray-800 mb-1">
+                                📄 {htmlCatalog.filename}
+                              </div>
+                              <div className="text-sm text-gray-600 mb-2">
+                                Criado em: {formattedDate}
+                              </div>
+                              <a
+                                href={`/catalogs/${htmlCatalog.filename}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-xs text-blue-600 font-mono hover:text-blue-800 hover:underline cursor-pointer block"
+                              >
+                                /catalogs/{htmlCatalog.filename}
+                              </a>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <a
+                                href={`/catalogs/${htmlCatalog.filename}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded hover:bg-blue-700 transition-all"
+                              >
+                                👁️ Visualizar
+                              </a>
+                              <button
+                                onClick={async () => {
+                                  if (!confirm('Tem certeza que deseja remover este arquivo HTML?')) {
+                                    return
+                                  }
+                                  try {
+                                    const response = await fetch('/api/catalogs/list', {
+                                      method: 'DELETE',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({ link: htmlCatalog.link }),
+                                    })
+                                    
+                                    if (response.ok) {
+                                      const newHtmlCatalogs = htmlCatalogs.filter(h => h.link !== htmlCatalog.link)
+                                      setHtmlCatalogs(newHtmlCatalogs)
+                                    } else {
+                                      const errorData = await response.json()
+                                      setError(errorData.error || 'Erro ao remover arquivo HTML')
+                                      console.error('Erro ao remover arquivo HTML:', errorData)
+                                    }
+                                  } catch (e: any) {
+                                    console.error('Erro ao remover arquivo HTML:', e)
+                                    setError('Erro ao conectar com o servidor')
+                                  }
+                                }}
+                                className="px-4 py-2 bg-red-500 text-white text-sm font-semibold rounded hover:bg-red-600 transition-all"
+                              >
+                                🗑️ Remover
+                              </button>
+                            </div>
                           </div>
                         )
                       })}

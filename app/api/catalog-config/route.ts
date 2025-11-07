@@ -187,13 +187,7 @@ async function generateCatalogHTML(catalog: any, profiles: any[]): Promise<strin
     return num.toString()
   }
 
-  // Calcular tempo restante
-  const now = new Date()
-  const expiresAt = new Date(catalog.expiresAt)
-  const diff = expiresAt.getTime() - now.getTime()
-  const totalSeconds = Math.max(0, Math.floor(diff / 1000))
-  const minutes = Math.floor(totalSeconds / 60)
-  const seconds = totalSeconds % 60
+  // Não calcular tempo restante - páginas HTML não expiram automaticamente
 
   // Gerar HTML
   const groupEntries = Object.entries(filteredGroups).sort((a, b) => {
@@ -320,10 +314,10 @@ async function generateCatalogHTML(catalog: any, profiles: any[]): Promise<strin
             </p>
           ` : ''}
         </div>
-        <div class="text-right bg-gradient-to-r from-red-500 to-orange-500 rounded-xl px-6 py-3 shadow-lg">
-          <div class="text-xs text-white/90 font-medium uppercase tracking-wide mb-1">Expira em</div>
-          <div class="text-3xl font-bold text-white" id="timer">
-            ${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}
+        <div class="text-right bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl px-6 py-3 shadow-lg">
+          <div class="text-xs text-white/90 font-medium uppercase tracking-wide mb-1">Status</div>
+          <div class="text-2xl font-bold text-white">
+            ✅ Ativo
           </div>
         </div>
       </div>
@@ -342,37 +336,6 @@ async function generateCatalogHTML(catalog: any, profiles: any[]): Promise<strin
         console.error('Erro ao copiar:', err);
       });
     }
-
-    // Atualizar timer
-    const expiresAt = new Date('${escapeJs(catalog.expiresAt)}');
-    function updateTimer() {
-      const now = new Date();
-      const diff = expiresAt.getTime() - now.getTime();
-      if (diff <= 0) {
-        document.getElementById('timer').textContent = '00:00';
-        document.body.innerHTML = \`
-          <div class="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 flex items-center justify-center p-4">
-            <div class="bg-white rounded-2xl shadow-2xl p-10 max-w-md w-full text-center">
-              <div class="text-7xl mb-6">⏰</div>
-              <h1 class="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-4">
-                Link Expirado ou Removido
-              </h1>
-              <p class="text-gray-600 mb-6 text-lg">
-                Este link de catálogo expirou ou foi removido e não pode mais ser acessado.
-              </p>
-            </div>
-          </div>
-        \`;
-        return;
-      }
-      const totalSeconds = Math.floor(diff / 1000);
-      const minutes = Math.floor(totalSeconds / 60);
-      const seconds = totalSeconds % 60;
-      document.getElementById('timer').textContent = 
-        String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
-    }
-    setInterval(updateTimer, 1000);
-    updateTimer();
   </script>
 </body>
 </html>`
