@@ -49,6 +49,7 @@ interface ProfileData {
   likes: string
   url?: string
   username?: string
+  id?: string
 }
 
 export default function CatalogPage() {
