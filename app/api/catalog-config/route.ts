@@ -10,38 +10,62 @@ const configFilePath = path.join(process.cwd(), 'public', 'catalog-config.json')
 // GET é público (usado pela página de catálogo pública)
 export async function GET() {
   try {
+    // Se o arquivo não existe, retornar array vazio (não é erro)
     if (!existsSync(configFilePath)) {
       return NextResponse.json({ catalogs: [] })
     }
 
-    const content = await readFile(configFilePath, 'utf-8')
-    const data = JSON.parse(content)
+    let content: string
+    try {
+      content = await readFile(configFilePath, 'utf-8')
+    } catch (readError: any) {
+      console.error('Erro ao ler arquivo de configuração:', readError)
+      // Se não conseguir ler, retornar array vazio
+      return NextResponse.json({ catalogs: [] })
+    }
+
+    let data: any
+    try {
+      data = JSON.parse(content)
+    } catch (parseError: any) {
+      console.error('Erro ao parsear JSON de configuração:', parseError)
+      // Se o JSON estiver corrompido, retornar array vazio
+      return NextResponse.json({ catalogs: [] })
+    }
     
     // Remover catálogos expirados automaticamente
     const now = new Date()
     const activeCatalogs = (data.catalogs || []).filter((cat: any) => {
       if (cat.expiresAt) {
-        return new Date(cat.expiresAt) > now
+        try {
+          return new Date(cat.expiresAt) > now
+        } catch (e) {
+          // Se a data for inválida, remover o catálogo
+          return false
+        }
       }
       return true
     })
     
-    // Se houve remoção de expirados, salvar arquivo atualizado
+    // Se houve remoção de expirados, tentar salvar arquivo atualizado
     if (activeCatalogs.length !== (data.catalogs || []).length) {
-      const configDir = path.dirname(configFilePath)
-      if (!existsSync(configDir)) {
-        await mkdir(configDir, { recursive: true })
+      try {
+        const configDir = path.dirname(configFilePath)
+        if (!existsSync(configDir)) {
+          await mkdir(configDir, { recursive: true })
+        }
+        await writeFile(configFilePath, JSON.stringify({ catalogs: activeCatalogs }, null, 2), 'utf-8')
+      } catch (writeError: any) {
+        // Se não conseguir escrever, apenas logar (no Vercel pode não conseguir)
+        console.warn('Aviso: Não foi possível salvar arquivo atualizado:', writeError.message)
       }
-      await writeFile(configFilePath, JSON.stringify({ catalogs: activeCatalogs }, null, 2), 'utf-8')
     }
     
     return NextResponse.json({ catalogs: activeCatalogs })
   } catch (error: any) {
     console.error('Erro ao carregar configurações:', error)
-    return NextResponse.json(
-      { error: `Erro ao carregar configurações: ${error.message}` },
-      { status: 500 }
-    )
+    // Em caso de erro, retornar array vazio ao invés de erro 500
+    return NextResponse.json({ catalogs: [] })
   }
 }
 
