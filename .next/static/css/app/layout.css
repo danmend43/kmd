@@ -1000,6 +1000,10 @@ video {
 .border-transparent {
   border-color: transparent;
 }
+.border-green-300 {
+  --tw-border-opacity: 1;
+  border-color: rgb(134 239 172 / var(--tw-border-opacity, 1));
+}
 .border-t-transparent {
   border-top-color: transparent;
 }

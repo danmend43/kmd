@@ -3,7 +3,7 @@ import { verifyAuth } from '@/lib/auth'
 
 // Valores padrão - usar variáveis de ambiente se disponíveis
 const DEFAULT_USERNAME = process.env.AUTH_USERNAME || 'danmend'
-const DEFAULT_PASSWORD = process.env.AUTH_PASSWORD || '202022'
+const DEFAULT_PASSWORD = process.env.AUTH_PASSWORD || 'Zshakugan5@'
 
 // Carregar configuração de autenticação
 export async function GET(request: NextRequest) {

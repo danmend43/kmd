@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 
 // Credenciais simples - usar variáveis de ambiente ou valores padrão
 const AUTH_USERNAME = process.env.AUTH_USERNAME || 'danmend'
-const AUTH_PASSWORD = process.env.AUTH_PASSWORD || '202022'
+const AUTH_PASSWORD = process.env.AUTH_PASSWORD || 'Zshakugan5@'
 
 export async function POST(request: NextRequest) {
   try {

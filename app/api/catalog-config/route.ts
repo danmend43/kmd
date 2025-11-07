@@ -249,7 +249,7 @@ async function generateCatalogHTML(catalog: any, profiles: any[], lastUpdateDate
       const firstLetter = safeDisplayName[0]?.toUpperCase() || '?'
 
       return `
-        <div class="bg-white rounded-2xl p-5 border border-gray-200 hover:border-purple-300 transition-colors">
+        <div class="profile-card bg-white rounded-2xl p-5 border border-gray-200 hover:border-purple-300 transition-colors">
           <div class="space-y-3">
             <div class="flex items-start gap-3">
               ${profile.avatar ? `
@@ -289,7 +289,7 @@ async function generateCatalogHTML(catalog: any, profiles: any[], lastUpdateDate
               </div>
             </div>
             ${copyText ? `
-              <button onclick="copyToClipboard('${safeCopyText}')" class="w-full mt-2 px-4 py-2 bg-gradient-to-r from-purple-50 to-pink-50 text-purple-700 hover:from-purple-100 hover:to-pink-100 rounded-lg font-medium text-sm transition-all border border-purple-200">
+              <button onclick="copyToClipboard('${safeCopyText}', this)" class="w-full mt-2 px-4 py-2 bg-gradient-to-r from-purple-50 to-pink-50 text-purple-700 hover:from-purple-100 hover:to-pink-100 rounded-lg font-medium text-sm transition-all border border-purple-200">
                 Copiar ID
               </button>
             ` : ''}
@@ -363,9 +363,47 @@ async function generateCatalogHTML(catalog: any, profiles: any[], lastUpdateDate
   </div>
 
   <script>
-    function copyToClipboard(text) {
+    let currentGreenCard = null;
+    let currentTimeout = null;
+
+    function copyToClipboard(text, button) {
       navigator.clipboard.writeText(text).then(() => {
-        alert('ID copiado: ' + text);
+        // Remover verde da div anterior se existir
+        if (currentGreenCard) {
+          currentGreenCard.classList.remove('bg-green-50', 'border-green-300');
+          currentGreenCard.classList.add('bg-white', 'border-gray-200');
+        }
+        
+        // Limpar timeout anterior se existir
+        if (currentTimeout) {
+          clearTimeout(currentTimeout);
+        }
+        
+        // Encontrar a div do perfil (card pai)
+        const profileCard = button.closest('.profile-card');
+        
+        // Adicionar verde na div atual
+        profileCard.classList.remove('bg-white', 'border-gray-200');
+        profileCard.classList.add('bg-green-50', 'border-green-300');
+        
+        // Atualizar botão
+        const originalText = button.textContent;
+        button.textContent = 'Copiado';
+        button.classList.add('bg-green-100', 'text-green-700', 'border-green-300');
+        button.classList.remove('bg-gradient-to-r', 'from-purple-50', 'to-pink-50', 'text-purple-700', 'border-purple-200');
+        
+        // Guardar referência da div atual
+        currentGreenCard = profileCard;
+        
+        // Voltar ao normal após 2 segundos
+        currentTimeout = setTimeout(() => {
+          profileCard.classList.remove('bg-green-50', 'border-green-300');
+          profileCard.classList.add('bg-white', 'border-gray-200');
+          button.textContent = originalText;
+          button.classList.remove('bg-green-100', 'text-green-700', 'border-green-300');
+          button.classList.add('bg-gradient-to-r', 'from-purple-50', 'to-pink-50', 'text-purple-700', 'border-purple-200');
+          currentGreenCard = null;
+        }, 2000);
       }).catch(err => {
         console.error('Erro ao copiar:', err);
       });
