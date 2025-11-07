@@ -105,12 +105,6 @@ export async function GET(request: NextRequest) {
           acc.name?.toLowerCase() === item.name?.toLowerCase()
         )
 
-        // Garantir HTTPS no avatar
-        let avatarUrl = item.avatar || ''
-        if (avatarUrl && avatarUrl.startsWith('http://')) {
-          avatarUrl = avatarUrl.replace('http://', 'https://')
-        }
-
         return {
           url: item.url || '',
           email: item.email || account?.email || '',
@@ -120,7 +114,7 @@ export async function GET(request: NextRequest) {
           displayName: item.name || account?.name || '',
           followers: item.followers || account?.followers || '',
           likes: item.likes || '',
-          avatar: avatarUrl,
+          avatar: item.avatar || '',
           bio: '',
           verified: item.verified || account?.verified || false,
           sequence: 0
@@ -198,19 +192,13 @@ export async function GET(request: NextRequest) {
         acc.name?.toLowerCase() === profile.name?.toLowerCase()
       )
 
-      // Garantir HTTPS no avatar
-      let avatarUrl = profile.avatar || ''
-      if (avatarUrl && avatarUrl.startsWith('http://')) {
-        avatarUrl = avatarUrl.replace('http://', 'https://')
-      }
-
       return {
         ...profile,
         email: profile.email || account?.email || '',
         password: account?.password || '',
         name: profile.name || account?.name || profile.username || '',
         displayName: profile.name || account?.name || '',
-        avatar: avatarUrl,
+        avatar: profile.avatar || '',
         bio: '',
         sequence: 0
       }

@@ -14,11 +14,6 @@ export function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  // Permitir acesso público aos arquivos HTML estáticos de catálogos
-  if (pathname.startsWith('/catalogs/') && pathname.endsWith('.html')) {
-    return NextResponse.next()
-  }
-
   // Permitir rotas de autenticação (login, verify, logout) - todos os métodos
   if (pathname.startsWith('/api/auth')) {
     return NextResponse.next()
@@ -78,8 +73,8 @@ export const config = {
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
-     * - arquivos estáticos (imagens, HTML, etc)
+     * - public folder (arquivos estáticos)
      */
-    '/((?!_next/static|_next/image|favicon.ico|catalogs/.*\\.html|.*\\.(?:svg|png|jpg|jpeg|gif|webp|html)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }

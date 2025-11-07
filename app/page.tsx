@@ -219,7 +219,6 @@ export default function Home() {
   })
   const [catalogLink, setCatalogLink] = useState<string>('')
   const [catalogs, setCatalogs] = useState<Array<{ link: string, number: string, name: string, expirationMinutes: number, expiresAt: string, createdAt: string, active: boolean }>>([])
-  const [htmlCatalogs, setHtmlCatalogs] = useState<Array<{ filename: string, link: string, createdAt: string, modifiedAt: string, size: number }>>([])
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null)
   const [dailyPostingGroup, setDailyPostingGroup] = useState<string | null>(null) // Grupo selecionado na postagem do dia
   const [dailyPosting, setDailyPosting] = useState<{ [key: string]: { selected: string[], startTime?: string, endTime?: string, completed?: boolean, selectedGroup?: string } }>({})
@@ -942,10 +941,9 @@ export default function Home() {
       await new Promise(resolve => setTimeout(resolve, 2000))
     }
 
-    // Salvar histórico em arquivo (sempre que houver resultados)
+    // Salvar histórico em arquivo
     if (executionData.length > 0) {
       try {
-        console.log(`💾 Salvando histórico com ${executionData.length} perfis...`)
         const response = await fetch('/api/save-history', {
           method: 'POST',
           headers: {
@@ -953,24 +951,17 @@ export default function Home() {
           },
           body: JSON.stringify({ data: executionData }),
         })
-        
         if (response.ok) {
-          const result = await response.json()
-          console.log('✅ Histórico salvo com sucesso:', result.filename || result.message)
+          console.log('Histórico salvo com sucesso')
           
           // Atualizar dados dos grupos imediatamente após salvar
           if (results.length > 0) {
             setGroupsProfiles(results)
           }
-        } else {
-          const errorData = await response.json().catch(() => ({ error: 'Erro desconhecido' }))
-          console.error('❌ Erro ao salvar histórico:', errorData.error || 'Erro desconhecido')
         }
-      } catch (e: any) {
-        console.error('❌ Erro ao salvar histórico:', e.message || e)
+      } catch (e) {
+        console.error('Erro ao salvar histórico:', e)
       }
-    } else {
-      console.warn('⚠️ Nenhum dado para salvar no histórico')
     }
 
     if (errors.length > 0 && results.length === 0) {
@@ -2713,10 +2704,6 @@ export default function Home() {
                         if (response.ok) {
                           const data = await response.json()
                           setCatalogLink(data.catalog.link)
-                          // Armazenar também a URL do HTML se disponível
-                          if (data.htmlUrl) {
-                            console.log('HTML estático gerado:', data.htmlUrl)
-                          }
                           setCatalogConfig({ expirationMinutes: null, selectedGroups: [] })
                           
                           // Recarregar lista de catálogos
@@ -2732,19 +2719,6 @@ export default function Home() {
                             })
                             setCatalogs(activeCatalogs)
                           }
-                          
-                          // Recarregar lista de HTMLs
-                          try {
-                            const htmlResponse = await fetch('/api/catalogs/list')
-                            if (htmlResponse.ok) {
-                              const htmlData = await htmlResponse.json()
-                              if (htmlData.files) {
-                                setHtmlCatalogs(htmlData.files)
-                              }
-                            }
-                          } catch (e) {
-                            console.error('Erro ao recarregar HTMLs:', e)
-                          }
                         }
                       } catch (e) {
                         console.error('Erro ao criar catálogo:', e)
@@ -2759,28 +2733,8 @@ export default function Home() {
 
                 {catalogLink && (
                   <div className="bg-green-50 border-2 border-green-500 rounded-lg p-4 mb-6">
-                    <p className="text-sm text-gray-700 mb-2">✅ Catálogo criado com sucesso!</p>
-                    
-                    <p className="text-sm font-semibold text-gray-800 mb-2 mt-4">📄 Link HTML Estático (Recomendado):</p>
-                    <div className="flex items-center gap-2 mb-4">
-                      <input
-                        type="text"
-                        value={`${typeof window !== 'undefined' ? window.location.origin : ''}/catalogs/${catalogLink}.html`}
-                        readOnly
-                        className="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-lg font-mono text-sm"
-                      />
-                      <button
-                        onClick={() => {
-                          const htmlLink = `${typeof window !== 'undefined' ? window.location.origin : ''}/catalogs/${catalogLink}.html`
-                          navigator.clipboard.writeText(htmlLink)
-                        }}
-                        className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all"
-                      >
-                        📋 Copiar HTML
-                      </button>
-                    </div>
-
-                    <p className="text-sm font-semibold text-gray-800 mb-2">🔗 Link React (Alternativo):</p>
+                    <p className="text-sm text-gray-700 mb-2">Catálogo criado com sucesso!</p>
+                    <p className="text-sm font-semibold text-gray-800 mb-2">Link do catálogo:</p>
                     <div className="flex items-center gap-2">
                       <input
                         type="text"
@@ -2832,110 +2786,22 @@ export default function Home() {
                             <button
                               onClick={async () => {
                                 try {
-                                  const response = await fetch('/api/catalog-config', {
+                                  await fetch('/api/catalog-config', {
                                     method: 'DELETE',
                                     headers: { 'Content-Type': 'application/json' },
                                     body: JSON.stringify({ link: catalog.link }),
                                   })
                                   
-                                  if (response.ok) {
-                                    const newCatalogs = catalogs.filter(c => c.link !== catalog.link)
-                                    setCatalogs(newCatalogs)
-                                  } else {
-                                    const errorData = await response.json()
-                                    setError(errorData.error || 'Erro ao remover catálogo')
-                                    console.error('Erro ao remover catálogo:', errorData)
-                                  }
-                                } catch (e: any) {
+                                  const newCatalogs = catalogs.filter(c => c.link !== catalog.link)
+                                  setCatalogs(newCatalogs)
+                                } catch (e) {
                                   console.error('Erro ao remover catálogo:', e)
-                                  setError('Erro ao conectar com o servidor')
                                 }
                               }}
                               className="px-3 py-1 bg-red-500 text-white text-sm font-semibold rounded hover:bg-red-600 transition-all"
                             >
                               🗑️ Remover
                             </button>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {htmlCatalogs.length > 0 && (
-                  <div className="mt-8 pt-6 border-t border-gray-200">
-                    <h3 className="text-lg font-bold text-gray-800 mb-4">📄 Páginas HTML de Catálogos</h3>
-                    <div className="space-y-3">
-                      {htmlCatalogs.map((htmlCatalog) => {
-                        const createdAt = new Date(htmlCatalog.createdAt)
-                        const formattedDate = createdAt.toLocaleString('pt-BR', {
-                          day: '2-digit',
-                          month: '2-digit',
-                          year: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })
-                        
-                        return (
-                          <div
-                            key={htmlCatalog.link}
-                            className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg hover:shadow-md transition-all"
-                          >
-                            <div className="flex-1">
-                              <div className="font-semibold text-gray-800 mb-1">
-                                📄 {htmlCatalog.filename}
-                              </div>
-                              <div className="text-sm text-gray-600 mb-2">
-                                Criado em: {formattedDate}
-                              </div>
-                              <a
-                                href={`/catalogs/${htmlCatalog.filename}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-xs text-blue-600 font-mono hover:text-blue-800 hover:underline cursor-pointer block"
-                              >
-                                /catalogs/{htmlCatalog.filename}
-                              </a>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <a
-                                href={`/catalogs/${htmlCatalog.filename}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded hover:bg-blue-700 transition-all"
-                              >
-                                👁️ Visualizar
-                              </a>
-                              <button
-                                onClick={async () => {
-                                  if (!confirm('Tem certeza que deseja remover este arquivo HTML?')) {
-                                    return
-                                  }
-                                  try {
-                                    const response = await fetch('/api/catalogs/list', {
-                                      method: 'DELETE',
-                                      headers: { 'Content-Type': 'application/json' },
-                                      body: JSON.stringify({ link: htmlCatalog.link }),
-                                    })
-                                    
-                                    if (response.ok) {
-                                      const newHtmlCatalogs = htmlCatalogs.filter(h => h.link !== htmlCatalog.link)
-                                      setHtmlCatalogs(newHtmlCatalogs)
-                                    } else {
-                                      const errorData = await response.json()
-                                      setError(errorData.error || 'Erro ao remover arquivo HTML')
-                                      console.error('Erro ao remover arquivo HTML:', errorData)
-                                    }
-                                  } catch (e: any) {
-                                    console.error('Erro ao remover arquivo HTML:', e)
-                                    setError('Erro ao conectar com o servidor')
-                                  }
-                                }}
-                                className="px-4 py-2 bg-red-500 text-white text-sm font-semibold rounded hover:bg-red-600 transition-all"
-                              >
-                                🗑️ Remover
-                              </button>
-                            </div>
                           </div>
                         )
                       })}

@@ -1,14 +1,1 @@
-{
-  "/login/page": "app/login/page.js",
-  "/page": "app/page.js",
-  "/catalog/[link]/page": "app/catalog/[link]/page.js",
-  "/api/calendar/route": "app/api/calendar/route.js",
-  "/api/daily-posting/route": "app/api/daily-posting/route.js",
-  "/api/catalog-config/route": "app/api/catalog-config/route.js",
-  "/api/load-last-history/route": "app/api/load-last-history/route.js",
-  "/api/urls/route": "app/api/urls/route.js",
-  "/api/history/list/route": "app/api/history/list/route.js",
-  "/api/accounts/route": "app/api/accounts/route.js",
-  "/api/history/load/route": "app/api/history/load/route.js",
-  "/api/catalogs/list/route": "app/api/catalogs/list/route.js"
-}
+{}
