@@ -71,7 +71,7 @@ export function clearAttempts(identifier: string): void {
 // Limpar tentativas antigas periodicamente (prevenir vazamento de memória)
 setInterval(() => {
   const now = Date.now()
-  for (const [identifier, info] of attempts.entries()) {
+  for (const [identifier, info] of Array.from(attempts.entries())) {
     // Remover se passou muito tempo e não está bloqueado
     if (!info.blockedUntil && now - info.lastAttempt > WINDOW_MS * 2) {
       attempts.delete(identifier)
