@@ -46,8 +46,9 @@ export function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  // Verificar se o usuário está autenticado
+  // Verificar se o usuário está autenticado (verificação simples)
   const authToken = request.cookies.get('auth-token')
+  const isAuthenticated = authToken && authToken.value === 'authenticated'
 
   // Para rotas de API, deixar que cada rota verifique individualmente
   // (elas retornarão JSON de erro ao invés de redirecionar)
@@ -56,7 +57,7 @@ export function middleware(request: NextRequest) {
   }
 
   // Para páginas, redirecionar para login se não autenticado
-  if (!authToken) {
+  if (!isAuthenticated) {
     const loginUrl = new URL('/login', request.url)
     loginUrl.searchParams.set('redirect', pathname)
     return NextResponse.redirect(loginUrl)

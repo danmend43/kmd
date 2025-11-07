@@ -44,32 +44,17 @@ function LoginForm() {
         body: JSON.stringify({ username, password }),
       })
 
-      if (!response.ok) {
-        // Tentar ler a resposta como JSON, mas pode não ser JSON
-        let errorMessage = 'Erro ao fazer login'
-        try {
-          const errorData = await response.json()
-          errorMessage = errorData.error || errorMessage
-        } catch {
-          // Se não for JSON, usar a mensagem padrão ou status
-          errorMessage = `Erro ${response.status}: ${response.statusText}`
-        }
-        setError(errorMessage)
-        return
-      }
-
       const data = await response.json()
 
       if (data.success) {
         const redirect = searchParams.get('redirect') || '/'
         router.push(redirect)
       } else {
-        setError(data.error || 'Erro ao fazer login')
+        setError(data.error || 'Usuário ou senha incorretos')
+        setLoading(false)
       }
     } catch (err: any) {
-      console.error('Erro ao fazer login:', err)
-      setError(err.message || 'Erro ao conectar com o servidor. Verifique sua conexão.')
-    } finally {
+      setError('Erro ao conectar com o servidor')
       setLoading(false)
     }
   }
