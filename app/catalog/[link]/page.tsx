@@ -81,6 +81,16 @@ export default function CatalogPage() {
           const now = new Date()
           const expiresAt = new Date(foundCatalog.expiresAt)
           
+          // Debug: verificar dados do catálogo
+          console.log('[CATALOG] Carregando catálogo:', {
+            link: foundCatalog.link,
+            expiresAt: foundCatalog.expiresAt,
+            expiresAtParsed: expiresAt.toISOString(),
+            now: now.toISOString(),
+            expirationMinutes: foundCatalog.expirationMinutes,
+            diffMinutes: Math.floor((expiresAt.getTime() - now.getTime()) / 60000)
+          })
+          
           if (expiresAt <= now) {
             setExpired(true)
             // Deletar catálogo expirado automaticamente
@@ -210,9 +220,23 @@ export default function CatalogPage() {
           }
 
           // Atualizar contador em tempo real (a cada segundo)
+          // IMPORTANTE: Usar expiresAt fixo do catálogo, NÃO recalcular
           const updateTimer = () => {
+            if (!foundCatalog || !foundCatalog.expiresAt) {
+              setExpired(true)
+              return
+            }
+            
             const now = new Date()
-            const expiresAt = new Date(foundCatalog.expiresAt)
+            const expiresAt = new Date(foundCatalog.expiresAt) // Usar o timestamp fixo salvo
+            
+            // Debug: verificar se expiresAt é válido
+            if (isNaN(expiresAt.getTime())) {
+              console.error('Erro: expiresAt inválido:', foundCatalog.expiresAt)
+              setExpired(true)
+              return
+            }
+            
             const diff = expiresAt.getTime() - now.getTime()
             
             if (diff <= 0) {

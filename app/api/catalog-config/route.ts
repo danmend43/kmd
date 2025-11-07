@@ -95,15 +95,25 @@ export async function POST(request: NextRequest) {
       isUnique = !activeCatalogs.some((cat: any) => cat.number === randomNumber)
     }
     
-    // Calcular timestamp de expiração
-    const expiresAt = new Date(Date.now() + expirationMinutes * 60000).toISOString()
+    // Calcular timestamp de expiração (timestamp fixo - NÃO recalcular)
+    const currentTime = Date.now()
+    const expiresAtTimestamp = currentTime + (expirationMinutes * 60000)
+    const expiresAt = new Date(expiresAtTimestamp).toISOString()
+
+    console.log('[CATALOG] Criando catálogo:', {
+      link: randomLink,
+      expirationMinutes,
+      expiresAt,
+      expiresAtTimestamp,
+      createdAt: new Date(currentTime).toISOString()
+    })
 
     const catalog = {
       link: randomLink,
       number: randomNumber!,
       name: catalogName,
       expirationMinutes,
-      expiresAt,
+      expiresAt, // Timestamp fixo - nunca recalcular
       createdAt: new Date().toISOString(),
       active: true,
       selectedGroups: selectedGroups || [] // Grupos selecionados
@@ -113,7 +123,7 @@ export async function POST(request: NextRequest) {
     const now = new Date()
     catalogs = catalogs.filter((cat: any) => {
       if (cat.expiresAt) {
-        return new Date(cat.expiresAt) > now
+        return new Date(cat.expiresAt).getTime() > now.getTime()
       }
       return true
     })
@@ -166,18 +176,33 @@ export async function DELETE(request: NextRequest) {
       catalogs = data.catalogs || []
     }
 
+    const originalLength = catalogs.length
     catalogs = catalogs.filter((cat: any) => cat.link !== link)
+    
+    // Verificar se realmente removeu algo
+    if (catalogs.length === originalLength) {
+      return NextResponse.json(
+        { error: 'Catálogo não encontrado' },
+        { status: 404 }
+      )
+    }
 
     const configDir = path.dirname(configFilePath)
     if (!existsSync(configDir)) {
       await mkdir(configDir, { recursive: true })
     }
 
-    await writeFile(configFilePath, JSON.stringify({ catalogs }, null, 2), 'utf-8')
+    try {
+      await writeFile(configFilePath, JSON.stringify({ catalogs }, null, 2), 'utf-8')
+    } catch (writeError: any) {
+      console.warn('Aviso: Não foi possível salvar no sistema de arquivos:', writeError.message)
+      // Continuar mesmo assim - no Vercel pode ser temporário
+    }
 
     return NextResponse.json({ 
       success: true, 
-      message: 'Catálogo removido com sucesso'
+      message: 'Catálogo removido com sucesso',
+      catalogs: catalogs.length
     })
   } catch (error: any) {
     console.error('Erro ao remover catálogo:', error)

@@ -941,9 +941,10 @@ export default function Home() {
       await new Promise(resolve => setTimeout(resolve, 2000))
     }
 
-    // Salvar histórico em arquivo
+    // Salvar histórico em arquivo (sempre que houver resultados)
     if (executionData.length > 0) {
       try {
+        console.log(`💾 Salvando histórico com ${executionData.length} perfis...`)
         const response = await fetch('/api/save-history', {
           method: 'POST',
           headers: {
@@ -951,17 +952,24 @@ export default function Home() {
           },
           body: JSON.stringify({ data: executionData }),
         })
+        
         if (response.ok) {
-          console.log('Histórico salvo com sucesso')
+          const result = await response.json()
+          console.log('✅ Histórico salvo com sucesso:', result.filename || result.message)
           
           // Atualizar dados dos grupos imediatamente após salvar
           if (results.length > 0) {
             setGroupsProfiles(results)
           }
+        } else {
+          const errorData = await response.json().catch(() => ({ error: 'Erro desconhecido' }))
+          console.error('❌ Erro ao salvar histórico:', errorData.error || 'Erro desconhecido')
         }
-      } catch (e) {
-        console.error('Erro ao salvar histórico:', e)
+      } catch (e: any) {
+        console.error('❌ Erro ao salvar histórico:', e.message || e)
       }
+    } else {
+      console.warn('⚠️ Nenhum dado para salvar no histórico')
     }
 
     if (errors.length > 0 && results.length === 0) {
@@ -2786,16 +2794,23 @@ export default function Home() {
                             <button
                               onClick={async () => {
                                 try {
-                                  await fetch('/api/catalog-config', {
+                                  const response = await fetch('/api/catalog-config', {
                                     method: 'DELETE',
                                     headers: { 'Content-Type': 'application/json' },
                                     body: JSON.stringify({ link: catalog.link }),
                                   })
                                   
-                                  const newCatalogs = catalogs.filter(c => c.link !== catalog.link)
-                                  setCatalogs(newCatalogs)
-                                } catch (e) {
+                                  if (response.ok) {
+                                    const newCatalogs = catalogs.filter(c => c.link !== catalog.link)
+                                    setCatalogs(newCatalogs)
+                                  } else {
+                                    const errorData = await response.json()
+                                    setError(errorData.error || 'Erro ao remover catálogo')
+                                    console.error('Erro ao remover catálogo:', errorData)
+                                  }
+                                } catch (e: any) {
                                   console.error('Erro ao remover catálogo:', e)
+                                  setError('Erro ao conectar com o servidor')
                                 }
                               }}
                               className="px-3 py-1 bg-red-500 text-white text-sm font-semibold rounded hover:bg-red-600 transition-all"
