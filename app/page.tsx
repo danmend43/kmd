@@ -2712,6 +2712,10 @@ export default function Home() {
                         if (response.ok) {
                           const data = await response.json()
                           setCatalogLink(data.catalog.link)
+                          // Armazenar também a URL do HTML se disponível
+                          if (data.htmlUrl) {
+                            console.log('HTML estático gerado:', data.htmlUrl)
+                          }
                           setCatalogConfig({ expirationMinutes: null, selectedGroups: [] })
                           
                           // Recarregar lista de catálogos
@@ -2741,8 +2745,28 @@ export default function Home() {
 
                 {catalogLink && (
                   <div className="bg-green-50 border-2 border-green-500 rounded-lg p-4 mb-6">
-                    <p className="text-sm text-gray-700 mb-2">Catálogo criado com sucesso!</p>
-                    <p className="text-sm font-semibold text-gray-800 mb-2">Link do catálogo:</p>
+                    <p className="text-sm text-gray-700 mb-2">✅ Catálogo criado com sucesso!</p>
+                    
+                    <p className="text-sm font-semibold text-gray-800 mb-2 mt-4">📄 Link HTML Estático (Recomendado):</p>
+                    <div className="flex items-center gap-2 mb-4">
+                      <input
+                        type="text"
+                        value={`${typeof window !== 'undefined' ? window.location.origin : ''}/catalogs/${catalogLink}.html`}
+                        readOnly
+                        className="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-lg font-mono text-sm"
+                      />
+                      <button
+                        onClick={() => {
+                          const htmlLink = `${typeof window !== 'undefined' ? window.location.origin : ''}/catalogs/${catalogLink}.html`
+                          navigator.clipboard.writeText(htmlLink)
+                        }}
+                        className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all"
+                      >
+                        📋 Copiar HTML
+                      </button>
+                    </div>
+
+                    <p className="text-sm font-semibold text-gray-800 mb-2">🔗 Link React (Alternativo):</p>
                     <div className="flex items-center gap-2">
                       <input
                         type="text"

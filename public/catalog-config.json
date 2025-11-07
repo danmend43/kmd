@@ -1,15 +1,15 @@
 {
   "catalogs": [
     {
-      "link": "ba3e91b8dee065f7a398466b5655591d",
-      "number": "578153",
+      "link": "03801c7dfb360c099367b73f0854aec5",
+      "number": "409890",
       "name": "Contas do Kwai",
       "expirationMinutes": 10,
-      "expiresAt": "2025-11-07T11:18:26.105Z",
-      "createdAt": "2025-11-07T11:08:26.105Z",
+      "expiresAt": "2025-11-07T11:41:13.733Z",
+      "createdAt": "2025-11-07T11:31:13.733Z",
       "active": true,
       "selectedGroups": [
-        "4k"
+        "3k"
       ]
     }
   ]
