@@ -1,4 +1,4 @@
 {
-  "/api/catalog-config/route": "app/api/catalog-config/route.js",
-  "/page": "app/page.js"
+  "/page": "app/page.js",
+  "/api/catalog-config/route": "app/api/catalog-config/route.js"
 }
