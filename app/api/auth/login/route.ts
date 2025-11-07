@@ -66,6 +66,18 @@ async function getCredentials(): Promise<{ username: string; passwordHash: strin
   }
 }
 
+// Suporte a OPTIONS para CORS preflight
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 200,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
+    },
+  })
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { username, password } = await request.json()

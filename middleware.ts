@@ -14,9 +14,21 @@ export function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  // Permitir rotas de autenticação (login, verify, logout)
+  // Permitir rotas de autenticação (login, verify, logout) - todos os métodos
   if (pathname.startsWith('/api/auth')) {
     return NextResponse.next()
+  }
+  
+  // Permitir OPTIONS requests (CORS preflight)
+  if (request.method === 'OPTIONS') {
+    return new NextResponse(null, {
+      status: 200,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      },
+    })
   }
 
   // Permitir acesso público ao GET de catalog-config (API usada pela página pública)
@@ -57,12 +69,11 @@ export const config = {
   matcher: [
     /*
      * Match all request paths except for the ones starting with:
-     * - api/auth (rotas de autenticação)
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
-     * - public folder
+     * - public folder (arquivos estáticos)
      */
-    '/((?!api/auth|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }
