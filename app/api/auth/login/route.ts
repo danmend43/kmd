@@ -13,8 +13,21 @@ const configFilePath = path.join(process.cwd(), 'auth-config.json')
 const DEFAULT_USERNAME = process.env.DEFAULT_AUTH_USERNAME || 'danmend'
 const DEFAULT_PASSWORD = process.env.DEFAULT_AUTH_PASSWORD || '202022'
 
+// Cache do hash da senha para evitar recalcular toda vez
+let cachedPasswordHash: string | null = null
+
 // Carregar credenciais do arquivo ou usar padrões
 async function getCredentials(): Promise<{ username: string; passwordHash: string }> {
+  // No Vercel, priorizar variáveis de ambiente
+  const envPasswordHash = process.env.DEFAULT_AUTH_PASSWORD_HASH
+  if (envPasswordHash) {
+    return {
+      username: DEFAULT_USERNAME,
+      passwordHash: envPasswordHash
+    }
+  }
+
+  // Tentar ler do arquivo (apenas em desenvolvimento/local)
   if (existsSync(configFilePath)) {
     try {
       const content = await readFile(configFilePath, 'utf-8')
@@ -40,11 +53,16 @@ async function getCredentials(): Promise<{ username: string; passwordHash: strin
       console.error('Erro ao ler configuração de autenticação:', error)
     }
   }
-  // Se não existe arquivo, criar hash bcrypt da senha padrão
-  const defaultPasswordHash = await bcrypt.hash(DEFAULT_PASSWORD, 10)
+  
+  // Se não existe arquivo e não tem hash em cache, criar hash bcrypt da senha padrão
+  // Usar cache para evitar recalcular toda vez (importante no Vercel)
+  if (!cachedPasswordHash) {
+    cachedPasswordHash = await bcrypt.hash(DEFAULT_PASSWORD, 10)
+  }
+  
   return {
     username: DEFAULT_USERNAME,
-    passwordHash: defaultPasswordHash
+    passwordHash: cachedPasswordHash
   }
 }
 
@@ -127,8 +145,20 @@ export async function POST(request: NextRequest) {
     return response
   } catch (error: any) {
     console.error('Erro ao fazer login:', error)
+    // Log mais detalhado para debug
+    if (error.message) {
+      console.error('Mensagem de erro:', error.message)
+    }
+    if (error.stack) {
+      console.error('Stack trace:', error.stack)
+    }
     return NextResponse.json(
-      { success: false, error: 'Erro ao processar login' },
+      { 
+        success: false, 
+        error: process.env.NODE_ENV === 'production' 
+          ? 'Erro ao processar login' 
+          : `Erro ao processar login: ${error.message || 'Erro desconhecido'}`
+      },
       { status: 500 }
     )
   }
