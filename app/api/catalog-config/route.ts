@@ -47,6 +47,38 @@ function normalizeNameForCopy(name: string): string {
     .trim()
 }
 
+// Função para obter data/hora do último histórico
+async function getLastHistoryDate(): Promise<string | null> {
+  try {
+    const historyDir = path.join(process.cwd(), 'public', 'history')
+    if (!existsSync(historyDir)) {
+      return null
+    }
+
+    const files = await readdir(historyDir)
+    const jsonFiles = files
+      .filter(file => file.startsWith('historico_') && file.endsWith('.json'))
+      .sort()
+      .reverse()
+
+    if (jsonFiles.length === 0) {
+      return null
+    }
+
+    const latestJsonFile = jsonFiles[0]
+    // Extrair data do nome do arquivo: historico_2025-11-02H03-25.json
+    const dateMatch = latestJsonFile.match(/historico_(\d{4})-(\d{2})-(\d{2})H(\d{2})-(\d{2})\.json/)
+    if (dateMatch) {
+      const [, year, month, day, hour, minute] = dateMatch
+      return `${day}/${month}/${year} ${hour}:${minute}`
+    }
+    return null
+  } catch (error: any) {
+    console.error('Erro ao obter data do histórico:', error)
+    return null
+  }
+}
+
 // Função para carregar perfis do histórico
 async function loadProfilesFromHistory(): Promise<any[]> {
   try {
@@ -149,7 +181,7 @@ function escapeJs(text: string): string {
 }
 
 // Função para gerar HTML estático do catálogo
-async function generateCatalogHTML(catalog: any, profiles: any[]): Promise<string> {
+async function generateCatalogHTML(catalog: any, profiles: any[], lastUpdateDate: string | null): Promise<string> {
   // Agrupar perfis
   const groups: { [key: string]: any[] } = {}
   profiles.forEach(profile => {
@@ -187,13 +219,7 @@ async function generateCatalogHTML(catalog: any, profiles: any[]): Promise<strin
     return num.toString()
   }
 
-  // Calcular tempo restante
-  const now = new Date()
-  const expiresAt = new Date(catalog.expiresAt)
-  const diff = expiresAt.getTime() - now.getTime()
-  const totalSeconds = Math.max(0, Math.floor(diff / 1000))
-  const minutes = Math.floor(totalSeconds / 60)
-  const seconds = totalSeconds % 60
+  // Não há mais timer de expiração
 
   // Gerar HTML
   const groupEntries = Object.entries(filteredGroups).sort((a, b) => {
@@ -320,12 +346,14 @@ async function generateCatalogHTML(catalog: any, profiles: any[]): Promise<strin
             </p>
           ` : ''}
         </div>
-        <div class="text-right bg-gradient-to-r from-red-500 to-orange-500 rounded-xl px-6 py-3 shadow-lg">
-          <div class="text-xs text-white/90 font-medium uppercase tracking-wide mb-1">Expira em</div>
-          <div class="text-3xl font-bold text-white" id="timer">
-            ${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}
+        ${lastUpdateDate ? `
+          <div class="text-right bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl px-6 py-3 shadow-lg">
+            <div class="text-xs text-white/90 font-medium uppercase tracking-wide mb-1">Última Atualização</div>
+            <div class="text-lg font-bold text-white">
+              ${escapeHtml(lastUpdateDate)}
+            </div>
           </div>
-        </div>
+        ` : ''}
       </div>
     </div>
   </div>
@@ -343,36 +371,6 @@ async function generateCatalogHTML(catalog: any, profiles: any[]): Promise<strin
       });
     }
 
-    // Atualizar timer
-    const expiresAt = new Date('${escapeJs(catalog.expiresAt)}');
-    function updateTimer() {
-      const now = new Date();
-      const diff = expiresAt.getTime() - now.getTime();
-      if (diff <= 0) {
-        document.getElementById('timer').textContent = '00:00';
-        document.body.innerHTML = \`
-          <div class="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 flex items-center justify-center p-4">
-            <div class="bg-white rounded-2xl shadow-2xl p-10 max-w-md w-full text-center">
-              <div class="text-7xl mb-6">⏰</div>
-              <h1 class="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-4">
-                Link Expirado ou Removido
-              </h1>
-              <p class="text-gray-600 mb-6 text-lg">
-                Este link de catálogo expirou ou foi removido e não pode mais ser acessado.
-              </p>
-            </div>
-          </div>
-        \`;
-        return;
-      }
-      const totalSeconds = Math.floor(diff / 1000);
-      const minutes = Math.floor(totalSeconds / 60);
-      const seconds = totalSeconds % 60;
-      document.getElementById('timer').textContent = 
-        String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
-    }
-    setInterval(updateTimer, 1000);
-    updateTimer();
   </script>
 </body>
 </html>`
@@ -404,33 +402,10 @@ export async function GET() {
       return NextResponse.json({ catalogs: [] })
     }
     
-    // Remover catálogos expirados automaticamente
-    const now = new Date()
+    // Retornar todos os catálogos ativos (sem filtro de expiração)
     const activeCatalogs = (data.catalogs || []).filter((cat: any) => {
-      if (cat.expiresAt) {
-        try {
-          return new Date(cat.expiresAt) > now
-        } catch (e) {
-          // Se a data for inválida, remover o catálogo
-          return false
-        }
-      }
-      return true
+      return cat.active !== false
     })
-    
-    // Se houve remoção de expirados, tentar salvar arquivo atualizado
-    if (activeCatalogs.length !== (data.catalogs || []).length) {
-      try {
-        const configDir = path.dirname(configFilePath)
-        if (!existsSync(configDir)) {
-          await mkdir(configDir, { recursive: true })
-        }
-        await writeFile(configFilePath, JSON.stringify({ catalogs: activeCatalogs }, null, 2), 'utf-8')
-      } catch (writeError: any) {
-        // Se não conseguir escrever, apenas logar (no Vercel pode não conseguir)
-        console.warn('Aviso: Não foi possível salvar arquivo atualizado:', writeError.message)
-      }
-    }
     
     return NextResponse.json({ catalogs: activeCatalogs })
   } catch (error: any) {
@@ -448,11 +423,11 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { expirationMinutes, name, selectedGroups } = await request.json()
+    const { name, selectedGroups } = await request.json()
 
-    if (!expirationMinutes) {
+    if (!selectedGroups || selectedGroups.length === 0) {
       return NextResponse.json(
-        { error: 'Tempo de expiração é obrigatório' },
+        { error: 'Selecione pelo menos um grupo de seguidores' },
         { status: 400 }
       )
     }
@@ -478,50 +453,23 @@ export async function POST(request: NextRequest) {
       // Gerar número aleatório de 6 dígitos
       randomNumber = Math.floor(100000 + Math.random() * 900000).toString()
       
-      // Verificar se já existe
-      const now = new Date()
-      const activeCatalogs = catalogs.filter((cat: any) => {
-        if (cat.expiresAt) {
-          return new Date(cat.expiresAt) > now
-        }
-        return true
-      })
-      
-      isUnique = !activeCatalogs.some((cat: any) => cat.number === randomNumber)
+      // Verificar se já existe (verificar todos os catálogos)
+      isUnique = !catalogs.some((cat: any) => cat.number === randomNumber)
     }
     
-    // Calcular timestamp de expiração (timestamp fixo - NÃO recalcular)
-    const currentTime = Date.now()
-    const expiresAtTimestamp = currentTime + (expirationMinutes * 60000)
-    const expiresAt = new Date(expiresAtTimestamp).toISOString()
-
     console.log('[CATALOG] Criando catálogo:', {
       link: randomLink,
-      expirationMinutes,
-      expiresAt,
-      expiresAtTimestamp,
-      createdAt: new Date(currentTime).toISOString()
+      createdAt: new Date().toISOString()
     })
 
     const catalog = {
       link: randomLink,
       number: randomNumber!,
       name: catalogName,
-      expirationMinutes,
-      expiresAt, // Timestamp fixo - nunca recalcular
       createdAt: new Date().toISOString(),
       active: true,
       selectedGroups: selectedGroups || [] // Grupos selecionados
     }
-
-    // Remover catálogos expirados antes de adicionar
-    const now = new Date()
-    catalogs = catalogs.filter((cat: any) => {
-      if (cat.expiresAt) {
-        return new Date(cat.expiresAt).getTime() > now.getTime()
-      }
-      return true
-    })
 
     // Adicionar novo catálogo
     catalogs.push(catalog)
@@ -537,9 +485,11 @@ export async function POST(request: NextRequest) {
     try {
       console.log('[CATALOG] Carregando perfis para gerar HTML...')
       const profiles = await loadProfilesFromHistory()
+      const lastUpdateDate = await getLastHistoryDate()
       console.log(`[CATALOG] ${profiles.length} perfis carregados`)
+      console.log(`[CATALOG] Última atualização: ${lastUpdateDate || 'N/A'}`)
       
-      const htmlContent = await generateCatalogHTML(catalog, profiles)
+      const htmlContent = await generateCatalogHTML(catalog, profiles, lastUpdateDate)
       
       // Criar diretório de catálogos se não existir
       if (!existsSync(catalogsDir)) {

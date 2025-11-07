@@ -214,12 +214,9 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'dashboard' | 'followers' | 'accounts' | 'urls' | 'history' | 'calendar' | 'groups' | 'postagem' | 'catalog-config' | 'config'>('dashboard')
   const [catalogConfig, setCatalogConfig] = useState({ 
-    expirationMinutes: null as number | null,
     selectedGroups: [] as string[]
   })
-  const [catalogLink, setCatalogLink] = useState<string>('')
-  const [catalogs, setCatalogs] = useState<Array<{ link: string, number: string, name: string, expirationMinutes: number, expiresAt: string, createdAt: string, active: boolean }>>([])
-  const [htmlCatalogs, setHtmlCatalogs] = useState<Array<{ filename: string, link: string, createdAt: string, modifiedAt: string, size: number }>>([])
+  const [catalogs, setCatalogs] = useState<Array<{ link: string, number: string, name: string, createdAt: string, active: boolean, selectedGroups?: string[] }>>([])
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null)
   const [dailyPostingGroup, setDailyPostingGroup] = useState<string | null>(null) // Grupo selecionado na postagem do dia
   const [dailyPosting, setDailyPosting] = useState<{ [key: string]: { selected: string[], startTime?: string, endTime?: string, completed?: boolean, selectedGroup?: string } }>({})
@@ -473,15 +470,7 @@ export default function Home() {
         if (response.ok) {
           const data = await response.json()
           if (data.catalogs) {
-            // Filtrar apenas catálogos não expirados
-            const now = new Date()
-            const activeCatalogs = data.catalogs.filter((cat: any) => {
-              if (cat.expiresAt) {
-                return new Date(cat.expiresAt) > now
-              }
-              return true
-            })
-            setCatalogs(activeCatalogs)
+            setCatalogs(data.catalogs)
           }
         }
       } catch (e) {
@@ -2584,42 +2573,6 @@ export default function Home() {
                 <h2 className="text-2xl font-bold text-gray-800 mb-6">🎨 Configurar Catálogo</h2>
                 
                 <div className="space-y-6 mb-6">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-3">Tempo de Expiração *</label>
-                    <div className="grid grid-cols-3 gap-3">
-                      <button
-                        onClick={() => setCatalogConfig({ ...catalogConfig, expirationMinutes: 5 })}
-                        className={`px-4 py-3 rounded-lg font-semibold transition-all ${
-                          catalogConfig.expirationMinutes === 5
-                            ? 'bg-purple-600 text-white shadow-md'
-                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                        }`}
-                      >
-                        5 minutos
-                      </button>
-                      <button
-                        onClick={() => setCatalogConfig({ ...catalogConfig, expirationMinutes: 10 })}
-                        className={`px-4 py-3 rounded-lg font-semibold transition-all ${
-                          catalogConfig.expirationMinutes === 10
-                            ? 'bg-purple-600 text-white shadow-md'
-                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                        }`}
-                      >
-                        10 minutos
-                      </button>
-                      <button
-                        onClick={() => setCatalogConfig({ ...catalogConfig, expirationMinutes: 15 })}
-                        className={`px-4 py-3 rounded-lg font-semibold transition-all ${
-                          catalogConfig.expirationMinutes === 15
-                            ? 'bg-purple-600 text-white shadow-md'
-                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                        }`}
-                      >
-                        15 minutos
-                      </button>
-                    </div>
-                  </div>
-
                   {/* Seleção de Grupos */}
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-3">Selecionar Grupos de Seguidores *</label>
@@ -2690,235 +2643,107 @@ export default function Home() {
                   
                   <button
                     onClick={async () => {
-                      if (!catalogConfig.expirationMinutes) {
-                        setError('Selecione o tempo de expiração')
-                        return
-                      }
                       if (catalogConfig.selectedGroups.length === 0) {
                         setError('Selecione pelo menos um grupo')
                         return
                       }
                       
+                      setError('')
                       try {
                         const response = await fetch('/api/catalog-config', {
                           method: 'POST',
                           headers: { 'Content-Type': 'application/json' },
                           body: JSON.stringify({
                             name: 'Contas do Kwai',
-                            expirationMinutes: catalogConfig.expirationMinutes,
                             selectedGroups: catalogConfig.selectedGroups
                           }),
                         })
                         
                         if (response.ok) {
                           const data = await response.json()
-                          setCatalogLink(data.catalog.link)
-                          // Armazenar também a URL do HTML se disponível
-                          if (data.htmlUrl) {
-                            console.log('HTML estático gerado:', data.htmlUrl)
-                          }
-                          setCatalogConfig({ expirationMinutes: null, selectedGroups: [] })
+                          setCatalogConfig({ selectedGroups: [] })
                           
-                          // Recarregar lista de catálogos
+                          // Recarregar lista de todos os catálogos
                           const listResponse = await fetch('/api/catalog-config')
                           if (listResponse.ok) {
                             const listData = await listResponse.json()
-                            const now = new Date()
-                            const activeCatalogs = listData.catalogs.filter((cat: any) => {
-                              if (cat.expiresAt) {
-                                return new Date(cat.expiresAt) > now
-                              }
-                              return true
-                            })
-                            setCatalogs(activeCatalogs)
+                            setCatalogs(listData.catalogs || [])
                           }
+                        } else {
+                          const errorData = await response.json()
+                          setError(errorData.error || 'Erro ao gerar catálogo')
                         }
                       } catch (e) {
-                        console.error('Erro ao criar catálogo:', e)
-                        setError('Erro ao criar catálogo')
+                        console.error('Erro ao gerar catálogo:', e)
+                        setError('Erro ao conectar com o servidor')
                       }
                     }}
                     className="w-full px-6 py-3 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 transition-all"
                   >
-                    ✅ Criar Catálogo
+                    🚀 Gerar
                   </button>
                 </div>
 
-                {catalogLink && (
-                  <div className="bg-green-50 border-2 border-green-500 rounded-lg p-4 mb-6">
-                    <p className="text-sm text-gray-700 mb-2">✅ Catálogo criado com sucesso!</p>
-                    
-                    <p className="text-sm font-semibold text-gray-800 mb-2 mt-4">📄 Link HTML Estático (Recomendado):</p>
-                    <div className="flex items-center gap-2 mb-4">
-                      <input
-                        type="text"
-                        value={`${typeof window !== 'undefined' ? window.location.origin : ''}/catalogs/${catalogLink}.html`}
-                        readOnly
-                        className="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-lg font-mono text-sm"
-                      />
-                      <button
-                        onClick={() => {
-                          const htmlLink = `${typeof window !== 'undefined' ? window.location.origin : ''}/catalogs/${catalogLink}.html`
-                          navigator.clipboard.writeText(htmlLink)
-                        }}
-                        className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all"
-                      >
-                        📋 Copiar HTML
-                      </button>
-                    </div>
-
-                    <p className="text-sm font-semibold text-gray-800 mb-2">🔗 Link React (Alternativo):</p>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="text"
-                        value={`${typeof window !== 'undefined' ? window.location.origin : ''}/catalog/${catalogLink}`}
-                        readOnly
-                        className="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-lg font-mono text-sm"
-                      />
-                      <button
-                        onClick={() => {
-                          const fullLink = `${typeof window !== 'undefined' ? window.location.origin : ''}/catalog/${catalogLink}`
-                          navigator.clipboard.writeText(fullLink)
-                        }}
-                        className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-all"
-                      >
-                        📋 Copiar
-                      </button>
-                    </div>
-                  </div>
-                )}
-
                 {catalogs.length > 0 && (
                   <div className="mt-8 pt-6 border-t border-gray-200">
-                    <h3 className="text-lg font-bold text-gray-800 mb-4">📋 Catálogos Ativos</h3>
-                    <div className="space-y-2">
+                    <h3 className="text-lg font-bold text-gray-800 mb-4">📋 Catálogos Gerados</h3>
+                    <div className="space-y-3">
                       {catalogs.map((catalog) => {
-                        const expiresAt = new Date(catalog.expiresAt)
-                        const now = new Date()
-                        const minutesLeft = Math.max(0, Math.floor((expiresAt.getTime() - now.getTime()) / 60000))
+                        const htmlUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/catalogs/${catalog.link}.html`
                         
                         return (
                           <div
                             key={catalog.link}
-                            className="flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-lg"
+                            className="flex items-center justify-between p-4 bg-gray-50 border border-gray-200 rounded-lg hover:border-purple-300 transition-colors"
                           >
-                            <div className="flex-1">
-                              <div className="font-semibold text-gray-800">{catalog.name}</div>
-                              <div className="text-sm text-gray-600">
-                                Número: {catalog.number} • Expira em: {minutesLeft} minutos
-                              </div>
-                              <a
-                                href={`/catalog/${catalog.link}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-xs text-purple-600 font-mono mt-1 hover:text-purple-800 hover:underline cursor-pointer block"
-                              >
-                                /catalog/{catalog.link}
-                              </a>
-                            </div>
-                            <button
-                              onClick={async () => {
-                                try {
-                                  const response = await fetch('/api/catalog-config', {
-                                    method: 'DELETE',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ link: catalog.link }),
-                                  })
-                                  
-                                  if (response.ok) {
-                                    const newCatalogs = catalogs.filter(c => c.link !== catalog.link)
-                                    setCatalogs(newCatalogs)
-                                  } else {
-                                    const errorData = await response.json()
-                                    setError(errorData.error || 'Erro ao remover catálogo')
-                                    console.error('Erro ao remover catálogo:', errorData)
-                                  }
-                                } catch (e: any) {
-                                  console.error('Erro ao remover catálogo:', e)
-                                  setError('Erro ao conectar com o servidor')
-                                }
-                              }}
-                              className="px-3 py-1 bg-red-500 text-white text-sm font-semibold rounded hover:bg-red-600 transition-all"
-                            >
-                              🗑️ Remover
-                            </button>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {htmlCatalogs.length > 0 && (
-                  <div className="mt-8 pt-6 border-t border-gray-200">
-                    <h3 className="text-lg font-bold text-gray-800 mb-4">📄 Páginas HTML de Catálogos</h3>
-                    <div className="space-y-3">
-                      {htmlCatalogs.map((htmlCatalog) => {
-                        const createdAt = new Date(htmlCatalog.createdAt)
-                        const formattedDate = createdAt.toLocaleString('pt-BR', {
-                          day: '2-digit',
-                          month: '2-digit',
-                          year: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })
-                        
-                        return (
-                          <div
-                            key={htmlCatalog.link}
-                            className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg hover:shadow-md transition-all"
-                          >
-                            <div className="flex-1">
-                              <div className="font-semibold text-gray-800 mb-1">
-                                📄 {htmlCatalog.filename}
-                              </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="font-semibold text-gray-800 mb-1">{catalog.name}</div>
                               <div className="text-sm text-gray-600 mb-2">
-                                Criado em: {formattedDate}
+                                Número: <span className="font-bold text-purple-600">{catalog.number}</span>
+                                {catalog.selectedGroups && catalog.selectedGroups.length > 0 && (
+                                  <span className="ml-2">
+                                    • Grupos: {catalog.selectedGroups.join(', ')}
+                                  </span>
+                                )}
                               </div>
-                              <a
-                                href={`/catalogs/${htmlCatalog.filename}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-xs text-blue-600 font-mono hover:text-blue-800 hover:underline cursor-pointer block"
-                              >
-                                /catalogs/{htmlCatalog.filename}
-                              </a>
+                              <div className="text-xs text-gray-500 font-mono truncate">
+                                {htmlUrl}
+                              </div>
                             </div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 ml-4">
                               <a
-                                href={`/catalogs/${htmlCatalog.filename}`}
+                                href={htmlUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded hover:bg-blue-700 transition-all"
+                                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-all text-sm font-medium"
                               >
                                 👁️ Visualizar
                               </a>
                               <button
                                 onClick={async () => {
-                                  if (!confirm('Tem certeza que deseja remover este arquivo HTML?')) {
+                                  if (!confirm('Tem certeza que deseja remover este catálogo?')) {
                                     return
                                   }
                                   try {
-                                    const response = await fetch('/api/catalogs/list', {
+                                    const response = await fetch('/api/catalog-config', {
                                       method: 'DELETE',
                                       headers: { 'Content-Type': 'application/json' },
-                                      body: JSON.stringify({ link: htmlCatalog.link }),
+                                      body: JSON.stringify({ link: catalog.link }),
                                     })
                                     
                                     if (response.ok) {
-                                      const newHtmlCatalogs = htmlCatalogs.filter(h => h.link !== htmlCatalog.link)
-                                      setHtmlCatalogs(newHtmlCatalogs)
+                                      const newCatalogs = catalogs.filter(c => c.link !== catalog.link)
+                                      setCatalogs(newCatalogs)
                                     } else {
                                       const errorData = await response.json()
-                                      setError(errorData.error || 'Erro ao remover arquivo HTML')
-                                      console.error('Erro ao remover arquivo HTML:', errorData)
+                                      setError(errorData.error || 'Erro ao remover catálogo')
                                     }
-                                  } catch (e: any) {
-                                    console.error('Erro ao remover arquivo HTML:', e)
+                                  } catch (e) {
+                                    console.error('Erro ao remover catálogo:', e)
                                     setError('Erro ao conectar com o servidor')
                                   }
                                 }}
-                                className="px-4 py-2 bg-red-500 text-white text-sm font-semibold rounded hover:bg-red-600 transition-all"
+                                className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-all text-sm font-medium"
                               >
                                 🗑️ Remover
                               </button>
