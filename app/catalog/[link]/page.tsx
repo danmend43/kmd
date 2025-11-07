@@ -81,6 +81,16 @@ export default function CatalogPage() {
           const now = new Date()
           const expiresAt = new Date(foundCatalog.expiresAt)
           
+          // Debug: verificar dados do catálogo
+          console.log('[CATALOG] Carregando catálogo:', {
+            link: foundCatalog.link,
+            expiresAt: foundCatalog.expiresAt,
+            expiresAtParsed: expiresAt.toISOString(),
+            now: now.toISOString(),
+            expirationMinutes: foundCatalog.expirationMinutes,
+            diffMinutes: Math.floor((expiresAt.getTime() - now.getTime()) / 60000)
+          })
+          
           if (expiresAt <= now) {
             setExpired(true)
             // Deletar catálogo expirado automaticamente
@@ -210,14 +220,36 @@ export default function CatalogPage() {
           }
 
           // Atualizar contador em tempo real (a cada segundo)
+          // IMPORTANTE: Usar expiresAt fixo do catálogo, NÃO recalcular
           const updateTimer = () => {
+            if (!foundCatalog || !foundCatalog.expiresAt) {
+              setExpired(true)
+              setTimeLeft({ minutes: 0, seconds: 0 })
+              return
+            }
+            
             const now = new Date()
-            const expiresAt = new Date(foundCatalog.expiresAt)
+            const expiresAt = new Date(foundCatalog.expiresAt) // Usar o timestamp fixo salvo
+            
+            // Debug: verificar se expiresAt é válido
+            if (isNaN(expiresAt.getTime())) {
+              console.error('Erro: expiresAt inválido:', foundCatalog.expiresAt)
+              setExpired(true)
+              setTimeLeft({ minutes: 0, seconds: 0 })
+              return
+            }
+            
             const diff = expiresAt.getTime() - now.getTime()
             
             if (diff <= 0) {
               setExpired(true)
               setTimeLeft({ minutes: 0, seconds: 0 })
+              // Tentar deletar automaticamente quando expirar
+              fetch('/api/catalog-config', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ link: foundCatalog.link }),
+              }).catch(e => console.error('Erro ao deletar catálogo expirado:', e))
               return
             }
             
@@ -231,12 +263,25 @@ export default function CatalogPage() {
                   updateTimer()
                   const interval = setInterval(updateTimer, 1000)
                   
+                  // Declarar variáveis dos intervals antes de usar
+                  let expirationInterval: NodeJS.Timeout | null = null
+                  let existenceCheckInterval: NodeJS.Timeout | null = null
+                  
                   // Verificar e deletar quando expirar
                   const checkExpiration = () => {
+                    if (!foundCatalog || !foundCatalog.expiresAt) {
+                      setExpired(true)
+                      clearInterval(interval)
+                      if (expirationInterval) clearInterval(expirationInterval)
+                      if (existenceCheckInterval) clearInterval(existenceCheckInterval)
+                      return
+                    }
+                    
                     const now = new Date()
                     const expiresAt = new Date(foundCatalog.expiresAt)
                     if (expiresAt <= now) {
                       setExpired(true)
+                      setTimeLeft({ minutes: 0, seconds: 0 })
                       // Deletar automaticamente
                       fetch('/api/catalog-config', {
                         method: 'DELETE',
@@ -244,14 +289,38 @@ export default function CatalogPage() {
                         body: JSON.stringify({ link: foundCatalog.link }),
                       }).catch(e => console.error('Erro ao deletar catálogo expirado:', e))
                       clearInterval(interval)
+                      if (expirationInterval) clearInterval(expirationInterval)
+                      if (existenceCheckInterval) clearInterval(existenceCheckInterval)
                     }
                   }
                   
-                  const expirationInterval = setInterval(checkExpiration, 1000)
+                  // Verificar periodicamente se o catálogo ainda existe (pode ter sido excluído)
+                  const checkCatalogExists = async () => {
+                    try {
+                      const checkResponse = await fetch('/api/catalog-config')
+                      if (checkResponse.ok) {
+                        const checkData = await checkResponse.json()
+                        const stillExists = checkData.catalogs?.some((cat: CatalogConfig) => cat.link === link)
+                        if (!stillExists) {
+                          setExpired(true)
+                          clearInterval(interval)
+                          if (expirationInterval) clearInterval(expirationInterval)
+                          if (existenceCheckInterval) clearInterval(existenceCheckInterval)
+                        }
+                      }
+                    } catch (e) {
+                      console.error('Erro ao verificar catálogo:', e)
+                    }
+                  }
+                  
+                  expirationInterval = setInterval(checkExpiration, 1000)
+                  // Verificar se catálogo ainda existe a cada 5 segundos
+                  existenceCheckInterval = setInterval(checkCatalogExists, 5000)
                   
                   return () => {
                     clearInterval(interval)
-                    clearInterval(expirationInterval)
+                    if (expirationInterval) clearInterval(expirationInterval)
+                    if (existenceCheckInterval) clearInterval(existenceCheckInterval)
                   }
                 }
               } catch (e) {
@@ -305,14 +374,19 @@ export default function CatalogPage() {
   if (expired) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-2xl p-10 max-w-md w-full text-center transform transition-all">
+        <div className="bg-white rounded-2xl shadow-2xl p-10 max-w-md w-full text-center transform transition-all animate-fade-in">
           <div className="text-7xl mb-6 animate-pulse">⏰</div>
           <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-4">
-            Link Expirado
+            Link Expirado ou Removido
           </h1>
           <p className="text-gray-600 mb-6 text-lg">
-            Este link de catálogo expirou e não pode mais ser acessado.
+            Este link de catálogo expirou ou foi removido e não pode mais ser acessado.
           </p>
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+            <p className="text-sm text-red-700 font-medium">
+              O catálogo não está mais disponível.
+            </p>
+          </div>
           <p className="text-sm text-gray-500">
             Por favor, solicite um novo link ao administrador.
           </p>
