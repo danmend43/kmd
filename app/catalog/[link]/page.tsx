@@ -48,6 +48,7 @@ interface ProfileData {
   followers: string
   likes: string
   url?: string
+  username?: string
 }
 
 export default function CatalogPage() {
@@ -114,7 +115,7 @@ export default function CatalogPage() {
               const profilesWithIds = historyData.profiles.map((profile: any, profileIndex: number) => {
                 let matchingAccount = null
                 const profileEmail = (profile.email || '').toLowerCase().trim()
-                const profileName = (profile.name || profile.displayName || profile.username || '').toLowerCase().trim()
+                const profileName = (profile.displayName || profile.username || '').toLowerCase().trim()
                 const profileUrlUsername = profile.url?.match(/@([^\/\?]+)/)?.[1]?.toLowerCase() || ''
                 const profileUsername = (profile.username || '').toLowerCase().trim()
                 
@@ -461,7 +462,7 @@ export default function CatalogPage() {
                 // Buscar conta correspondente - FORÇAR encontrar sempre
                 let account = null
                 const profileEmail = (profile.email || '').toLowerCase().trim()
-                const profileName = (profile.name || profile.displayName || profile.username || '').toLowerCase().trim()
+                const profileName = (profile.displayName || profile.username || '').toLowerCase().trim()
                 const profileUrlUsername = profile.url?.match(/@([^\/\?]+)/)?.[1]?.toLowerCase() || ''
                 
                 // Tentativa 1: Email completo exato
@@ -547,7 +548,7 @@ export default function CatalogPage() {
                 }
                 
                 const kwaiUrl = getKwaiUrl()
-                const displayName = cleanDisplayName(profile.displayName || profile.name || account?.name || profile.email || 'N/A')
+                const displayName = cleanDisplayName(profile.displayName || account?.name || profile.email || 'N/A')
                 const isSelected = selectedProfileIndex === index
                 
                 const handleCardClick = () => {
