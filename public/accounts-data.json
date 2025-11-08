@@ -68,14 +68,6 @@
       "name": "Spiderman"
     },
     {
-      "email": "sonicia786@gmail.com",
-      "password": "kwai202022",
-      "name": "Sonicia",
-      "followers": "3.3K",
-      "verified": true,
-      "id": "9"
-    },
-    {
       "email": "pokemonia72@gmail.com",
       "password": "kwai202022",
       "name": "Pokemonia",
@@ -571,5 +563,5 @@
       "id": "67"
     }
   ],
-  "lastUpdated": "2025-11-08T15:41:46.744Z"
+  "lastUpdated": "2025-11-08T17:03:13.255Z"
 }

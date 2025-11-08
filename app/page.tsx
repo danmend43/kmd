@@ -1922,6 +1922,33 @@ export default function Home() {
                   <h2 className="text-2xl font-bold text-gray-800">🔗 URLs ({urls.length})</h2>
                 </div>
 
+                {/* Formulário para adicionar nova URL */}
+                <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={newUrl}
+                      onChange={(e) => setNewUrl(e.target.value)}
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter') {
+                          handleAddUrl()
+                        }
+                      }}
+                      placeholder="Digite a URL do perfil Kwai..."
+                      className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    />
+                    <button
+                      onClick={handleAddUrl}
+                      className="px-6 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all shadow-md"
+                    >
+                      ➕ Adicionar
+                    </button>
+                  </div>
+                  {error && (
+                    <p className="mt-2 text-sm text-red-600">{error}</p>
+                  )}
+                </div>
+
                 {/* Lista de URLs */}
                 <div className="max-h-96 overflow-y-auto space-y-2">
                   {urls.map((url, index) => {
@@ -1933,7 +1960,7 @@ export default function Home() {
                     return (
                       <div
                         key={index}
-                        className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                        className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors group"
                       >
                         <span className="text-sm text-gray-500 w-8">{index + 1}.</span>
                         
@@ -1963,6 +1990,19 @@ export default function Home() {
                             <span className="text-xs text-gray-500 block truncate">{displayName}</span>
                           )}
                         </div>
+
+                        {/* Botão de deletar */}
+                        <button
+                          onClick={() => {
+                            if (window.confirm(`Tem certeza que deseja deletar esta URL?\n\n${url}`)) {
+                              handleRemoveUrl(index)
+                            }
+                          }}
+                          className="flex-shrink-0 px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors shadow-sm opacity-0 group-hover:opacity-100"
+                          title="Deletar URL"
+                        >
+                          🗑️
+                        </button>
                       </div>
                     )
                   })}
