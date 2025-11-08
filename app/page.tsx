@@ -234,7 +234,8 @@ export default function Home() {
     password: '',
     url: '',
     number: '',
-    cel: ''
+    cel: '',
+    name: ''
   })
   const [historyFiles, setHistoryFiles] = useState<Array<{filename: string, date: string}>>([])
   const [selectedHistory, setSelectedHistory] = useState<string>('')
@@ -1574,14 +1575,31 @@ export default function Home() {
                           />
                         </div>
                         <div>
-                          <label className="block text-sm font-semibold text-slate-700 mb-2">Link do Kwai *</label>
+                          <label className="block text-sm font-semibold text-slate-700 mb-2">Nome (opcional)</label>
+                          <input
+                            type="text"
+                            value={newAccount.name || ''}
+                            onChange={(e) => setNewAccount({ ...newAccount, name: e.target.value })}
+                            className="input-new"
+                            placeholder="Nome da conta"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-semibold text-slate-700 mb-2">
+                            Link do Kwai {editingAccountIndex === null ? '*' : ''}
+                          </label>
                           <input
                             type="text"
                             value={newAccount.url}
                             onChange={(e) => setNewAccount({ ...newAccount, url: e.target.value })}
                             className="input-new font-mono text-sm"
                             placeholder="https://k.kwai.com/u/@username/..."
+                            disabled={editingAccountIndex !== null}
+                            title={editingAccountIndex !== null ? 'O link do Kwai não pode ser editado' : ''}
                           />
+                          {editingAccountIndex !== null && (
+                            <p className="text-xs text-gray-500 mt-1">O link do Kwai não pode ser alterado</p>
+                          )}
                         </div>
                         <div>
                           <label className="block text-sm font-semibold text-slate-700 mb-2">Número (opcional)</label>
@@ -1612,9 +1630,19 @@ export default function Home() {
                       <div className="flex gap-3 mt-6">
                         <button
                           onClick={async () => {
-                            if (!newAccount.email || !newAccount.password || !newAccount.url) {
-                              setError('Preencha todos os campos obrigatórios')
-                              return
+                            // Validação: URL obrigatório apenas para novas contas
+                            if (editingAccountIndex === null) {
+                              // Nova conta - todos os campos obrigatórios
+                              if (!newAccount.email || !newAccount.password || !newAccount.url) {
+                                setError('Preencha todos os campos obrigatórios')
+                                return
+                              }
+                            } else {
+                              // Editando conta - URL não é obrigatório, mas email e senha sim
+                              if (!newAccount.email || !newAccount.password) {
+                                setError('Preencha todos os campos obrigatórios')
+                                return
+                              }
                             }
                             
                             // Gerar ID automaticamente por incremento numérico
@@ -1645,31 +1673,28 @@ export default function Home() {
                             
                             // Criar objeto da conta - nome inicia como "n/a" para novas contas
                             const existingAccount = editingAccountIndex !== null ? accounts[editingAccountIndex] : null
+                            
+                            // Ao editar, manter a URL original (não permitir alteração)
+                            const urlToSave = editingAccountIndex !== null 
+                              ? (existingAccount?.url || '') 
+                              : newAccount.url
+                            
+                            // Processar name - usar o valor digitado, ou manter existente se vazio ao editar
+                            const nameValue = editingAccountIndex === null 
+                              ? (newAccount.name && newAccount.name.trim() !== '' ? newAccount.name : 'n/a')
+                              : (newAccount.name && newAccount.name.trim() !== '' ? newAccount.name : (existingAccount?.name || 'n/a'))
+                            
                             const accountToSave: AccountData = {
                               ...newAccount,
                               id: finalId,
+                              url: urlToSave, // Usar URL original ao editar
                               cel: celValue,
-                              name: editingAccountIndex === null 
-                                ? 'n/a' 
-                                : (existingAccount?.name || 'n/a')
+                              name: nameValue
                             }
                             
                             if (editingAccountIndex !== null) {
-                              // Editar conta existente
-                              const oldAccount = accounts[editingAccountIndex]
+                              // Editar conta existente - não alterar URL
                               const updatedAccounts = [...accounts]
-                              
-                              // Se a URL mudou, atualizar na lista de URLs
-                              if (oldAccount.url && oldAccount.url !== newAccount.url) {
-                                // Remover URL antiga
-                                const updatedUrls = urls.filter(url => url !== oldAccount.url)
-                                // Adicionar nova URL se não existir
-                                if (!updatedUrls.includes(newAccount.url)) {
-                                  updatedUrls.push(newAccount.url)
-                                }
-                                setUrls(updatedUrls)
-                                await saveUrls(updatedUrls)
-                              }
                               
                               updatedAccounts[editingAccountIndex] = accountToSave
                               setAccounts(updatedAccounts)
@@ -1710,7 +1735,7 @@ export default function Home() {
                               }
                             }
                             
-                            setNewAccount({ id: '', email: '', password: '', url: '', number: '', cel: '' })
+                            setNewAccount({ id: '', email: '', password: '', url: '', number: '', cel: '', name: '' })
                             setShowAddAccount(false)
                             setError(null)
                           }}
@@ -1722,7 +1747,7 @@ export default function Home() {
                           onClick={() => {
                             setShowAddAccount(false)
                             setEditingAccountIndex(null)
-                            setNewAccount({ id: '', email: '', password: '', url: '', number: '', cel: '' })
+                            setNewAccount({ id: '', email: '', password: '', url: '', number: '', cel: '', name: '' })
                             setError(null)
                           }}
                           className="btn-new btn-secondary-new flex-1"
@@ -1847,7 +1872,8 @@ export default function Home() {
                                         password: account.password,
                                         url: account.url || '',
                                         number: account.number || '',
-                                        cel: account.cel || ''
+                                        cel: account.cel || '',
+                                        name: account.name || ''
                                       })
                                       setShowAddAccount(true)
                                     }}

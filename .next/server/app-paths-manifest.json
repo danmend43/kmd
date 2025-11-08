@@ -1,4 +1,6 @@
 {
+  "/api/analyze/route": "app/api/analyze/route.js",
   "/page": "app/page.js",
+  "/api/save-history/route": "app/api/save-history/route.js",
   "/api/catalog-config/route": "app/api/catalog-config/route.js"
 }

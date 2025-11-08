@@ -75,3 +75,5 @@ Para produção, considere:
 - Tokens JWT expiram após 7 dias (configurável em `lib/jwt.ts`)
 
 
+
+
