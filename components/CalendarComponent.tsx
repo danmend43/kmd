@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { calculateSequence } from '@/lib/calendar-utils'
 
 interface CalendarComponentProps {
   markedDays: { [key: string]: boolean }
@@ -66,40 +67,7 @@ export default function CalendarComponent({
     calendarDays.push(new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day))
   }
 
-  // Contar sequência de dias marcados consecutivos (da data mais recente para trás)
-  const calculateSequence = (): number => {
-    const sortedDates = Object.keys(markedDays)
-      .filter(key => markedDays[key])
-      .map(key => new Date(key + 'T00:00:00'))
-      .sort((a, b) => b.getTime() - a.getTime()) // Mais recente primeiro
-    
-    if (sortedDates.length === 0) return 0
-
-    let sequence = 1
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-
-    // Começar da data mais recente e ir para trás
-    for (let i = 0; i < sortedDates.length - 1; i++) {
-      const currentDate = sortedDates[i]
-      const nextDate = sortedDates[i + 1]
-      
-      // Verificar se é consecutivo (diferença de 1 dia)
-      const diffTime = currentDate.getTime() - nextDate.getTime()
-      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
-      
-      if (diffDays === 1) {
-        sequence++
-      } else {
-        // Se encontrar uma quebra, verificar se há sequência mais recente
-        break
-      }
-    }
-    
-    return sequence
-  }
-
-  const totalSequence = calculateSequence()
+  const totalSequence = calculateSequence(markedDays)
 
   // Selecionar dia
   const handleDayClick = (date: Date | null) => {
@@ -129,27 +97,7 @@ export default function CalendarComponent({
       ? { ...markedDays, [dateKey]: false }
       : { ...markedDays, [dateKey]: true }
      
-    const sortedDates = Object.keys(tempMarkedDays)
-      .filter(key => tempMarkedDays[key])
-      .map(key => new Date(key + 'T00:00:00'))
-      .sort((a, b) => b.getTime() - a.getTime())
-    
-    let newSequence = 0
-    if (sortedDates.length > 0) {
-      newSequence = 1
-      for (let i = 0; i < sortedDates.length - 1; i++) {
-        const currentDate = sortedDates[i]
-        const nextDate = sortedDates[i + 1]
-        const diffTime = currentDate.getTime() - nextDate.getTime()
-        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
-        
-        if (diffDays === 1) {
-          newSequence++
-        } else {
-          break
-        }
-      }
-    }
+    const newSequence = calculateSequence(tempMarkedDays)
     
     const newSequences = { ...sequences }
     newSequences['global'] = newSequence
@@ -198,11 +146,11 @@ export default function CalendarComponent({
 
   return (
     <div className="space-y-6">
-      {/* Info da Sequência */}
+      {/* Info dos Dias Marcados */}
       <div className="bg-gradient-to-r from-purple-100 to-pink-100 rounded-lg p-4 border border-purple-200">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm text-gray-600">Sequência Atual</p>
+            <p className="text-sm text-gray-600">Total de Dias Marcados</p>
             <p className="text-3xl font-bold text-purple-600">{totalSequence} dias</p>
           </div>
           <button
@@ -319,7 +267,7 @@ export default function CalendarComponent({
 
           {isSelectedMarked && (
             <p className="mt-3 text-sm text-green-600 font-semibold">
-              ✓ Este dia está marcado na sua sequência
+              ✓ Este dia está marcado
             </p>
           )}
         </div>

@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import ProfileCard from '@/components/ProfileCard'
 import CalendarComponent from '@/components/CalendarComponent'
+import { calculateSequence } from '@/lib/calendar-utils'
 
 // Função para limpar o nome, removendo " (@username) on Kwai"
 const cleanDisplayName = (name: string): string => {
@@ -306,9 +307,32 @@ export default function Home() {
           const data = await response.json()
           if (data.markedDays) {
             setMarkedDays(data.markedDays)
-          }
-          if (data.sequences) {
-            // Usar sequências do calendário como fonte principal
+            
+            // IMPORTANTE: Recalcular a sequência com TODOS os dias marcados de TODOS os meses
+            // Isso garante que a sequência sempre esteja correta, mesmo se o valor salvo estiver desatualizado
+            const calculatedSequence = calculateSequence(data.markedDays)
+            setSequences({ ...data.sequences, 'global': calculatedSequence })
+            
+            // Se a sequência calculada for diferente da salva, atualizar no servidor
+            if (data.sequences?.global !== calculatedSequence) {
+              try {
+                await fetch('/api/calendar', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({
+                    markedDays: data.markedDays,
+                    sequences: { ...data.sequences, 'global': calculatedSequence }
+                  }),
+                })
+                console.log('Sequência recalculada e atualizada:', calculatedSequence)
+              } catch (e) {
+                console.error('Erro ao atualizar sequência:', e)
+              }
+            }
+          } else if (data.sequences) {
+            // Se não houver markedDays, usar sequências do calendário
             setSequences(data.sequences)
           }
         }
@@ -983,27 +1007,7 @@ export default function Home() {
       setMarkedDays(newMarkedDays)
       
       // Calcular nova sequência global do calendário
-      const sortedDates = Object.keys(newMarkedDays)
-        .filter(key => newMarkedDays[key])
-        .map(key => new Date(key + 'T00:00:00'))
-        .sort((a, b) => b.getTime() - a.getTime()) // Mais recente primeiro
-      
-      let newSequence = 0
-      if (sortedDates.length > 0) {
-        newSequence = 1
-        for (let i = 0; i < sortedDates.length - 1; i++) {
-          const currentDate = sortedDates[i]
-          const nextDate = sortedDates[i + 1]
-          const diffTime = currentDate.getTime() - nextDate.getTime()
-          const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
-          
-          if (diffDays === 1) {
-            newSequence++
-          } else {
-            break
-          }
-        }
-      }
+      const newSequence = calculateSequence(newMarkedDays)
       
       const newSequences = { ...sequences, 'global': newSequence }
       setSequences(newSequences)
@@ -1352,31 +1356,9 @@ export default function Home() {
                       </div>
                       <div className="stat-card">
                         <div className="stat-value">
-                          {(() => {
-                            const sortedDates = Object.keys(markedDays)
-                              .filter(key => markedDays[key])
-                              .map(key => new Date(key + 'T00:00:00'))
-                              .sort((a, b) => b.getTime() - a.getTime())
-                            
-                            if (sortedDates.length === 0) return 0
-
-                            let sequence = 1
-                            for (let i = 0; i < sortedDates.length - 1; i++) {
-                              const currentDate = sortedDates[i]
-                              const nextDate = sortedDates[i + 1]
-                              const diffTime = currentDate.getTime() - nextDate.getTime()
-                              const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
-                              
-                              if (diffDays === 1) {
-                                sequence++
-                              } else {
-                                break
-                              }
-                            }
-                            return sequence
-                          })()}
+                          {calculateSequence(markedDays)}
                         </div>
-                        <div className="stat-label">Dias Consecutivos</div>
+                        <div className="stat-label">Dias Marcados</div>
                       </div>
                     </div>
                   </div>
@@ -1441,7 +1423,7 @@ export default function Home() {
                         <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Seguidores</th>
                         <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Curtidas</th>
                         <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Verificado</th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Sequência</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Dias</th>
                         <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Ações</th>
                       </tr>
                     </thead>
@@ -1902,7 +1884,7 @@ export default function Home() {
             {/* Calendar Tab */}
             {activeTab === 'calendar' && (
               <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
-                <h2 className="text-2xl font-bold text-gray-800 mb-6">📅 Calendário de Sequência</h2>
+                <h2 className="text-2xl font-bold text-gray-800 mb-6">📅 Calendário</h2>
                 
                 <CalendarComponent
                   markedDays={markedDays}
