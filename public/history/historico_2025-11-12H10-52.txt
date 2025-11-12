@@ -1,0 +1,724 @@
+═══════════════════════════════════════════════════════════
+HISTÓRICO DE EXECUÇÃO - KWAI PROFILE ANALYZER
+═══════════════════════════════════════════════════════════
+
+Data e Hora: 12/11/2025, 10:52:43
+Total de Perfis Analisados: 64
+
+═══════════════════════════════════════════════════════════
+
+[1] sonicrockeiro
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+URL: https://k.kwai.com/u/@sonicrockeiro/CtsFOYGe
+Email: sonicrockeiro@gmail.com
+Nome de Usuário: sonicrockeiro
+Nome de Exibição: sonicrockeiro
+Foto/Avatar: https://aws-br-pic.kwai.net/bs2/overseaHead/20251016213713_BMTUwMDAxNzEzMDQ4MTI4_s.jpg
+Seguidores: 7609
+Curtidas: 71046
+Verificado: NÃO
+
+[2] Ttailss
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+URL: https://k.kwai.com/u/@ttailss/wshiC0Yp
+Email: ttailss488@gmail.com
+Nome de Usuário: ttailss
+Nome de Exibição: Ttailss
+Foto/Avatar: https://aws-br-pic.kwai.net/bs2/overseaHead/20251107204612_BMTUwMDAxNzEzNzc5ODUz_s.jpg
+Seguidores: 6582
+Curtidas: 61280
+Verificado: NÃO
+
+[3] crafa
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+URL: https://k.kwai.com/u/@crafa495/tXCUibtR
+Email: N/A
+Nome de Usuário: crafa495
+Nome de Exibição: crafa
+Foto/Avatar: https://aws-br-pic.kwai.net/bs2/overseaHead/20251022132851_BMTUwMDAxNzEzODE3NDc0_s.jpg
+Seguidores: 6375
+Curtidas: 59555
+Verificado: NÃO
+
+[4] daniel
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+URL: https://k.kwai.com/u/@evfeb293/bstC8nm3
+Email: N/A
+Nome de Usuário: evfeb293
+Nome de Exibição: daniel
+Foto/Avatar: https://aws-br-pic.kwai.net/bs2/overseaHead/20251022154427_BMTUwMDAxNzEzODE3OTM5_s.jpg
+Seguidores: 6568
+Curtidas: 61308
+Verificado: NÃO
+
+[5] leoedit
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+URL: https://k.kwai.com/u/@leofood680/HuM8Csok
+Email: N/A
+Nome de Usuário: leofood680
+Nome de Exibição: leoedit
+Foto/Avatar: https://aws-br-pic.kwai.net/bs2/overseaHead/20251030173522_BMTUwMDAxNjkyODEzODY4_s.jpg
+Seguidores: 9849
+Curtidas: 91188
+Verificado: NÃO
+
+[6] spideria
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+URL: https://k.kwai.com/u/@spideria/z9wxCPWx
+Email: spideria63@gmail.com
+Nome de Usuário: spideria
+Nome de Exibição: spideria
+Foto/Avatar: https://aws-br-pic.kwai.net/bs2/overseaHead/20251107205125_BMTUwMDAxNzEzODE5NDE5_s.jpg
+Seguidores: 6528
+Curtidas: 60893
+Verificado: NÃO
+
+[7] Spiderman
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+URL: https://k.kwai.com/u/@spiderman014/2KzOsCvR
+Email: N/A
+Nome de Usuário: spiderman014
+Nome de Exibição: Spiderman
+Foto/Avatar: https://aws-br-pic.kwai.net/bs2/overseaHead/20251107205520_BMTUwMDAxNzEzODE5ODky_s.jpg
+Seguidores: 6661
+Curtidas: 62010
+Verificado: NÃO
+
+[8] Pokemonia
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+URL: https://k.kwai.com/u/@pokemonia/FJCEtIqj
+Email: pokemonia72@gmail.com
+Nome de Usuário: pokemonia
+Nome de Exibição: Pokemonia
+Foto/Avatar: https://aws-br-pic.kwai.net/bs2/overseaHead/20251022225152_BMTUwMDAxNzEzODIxNTQ4_s.jpg
+Seguidores: 6699
+Curtidas: 62267
+Verificado: NÃO
+
+[9] Sonix
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+URL: https://k.kwai.com/u/@sonic263/9FIVtCK2
+Email: N/A
+Nome de Usuário: sonic263
+Nome de Exibição: Sonix
+Foto/Avatar: https://aws-br-pic.kwai.net/bs2/overseaHead/20251022154240_BMTUwMDAxNzEzODIyMDQz_s.jpg
+Seguidores: 6459
+Curtidas: 60385
+Verificado: NÃO
+
+[10] Danielmend
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+URL: https://k.kwai.com/u/@danielmend766/3wCyqXoF
+Email: N/A
+Nome de Usuário: danielmend766
+Nome de Exibição: Danielmend
+Foto/Avatar: https://aws-br-pic.kwai.net/bs2/overseaHead/20251023212748_BMTUwMDAxNzEzOTg0MTgy_s.jpg
+Seguidores: 6455
+Curtidas: 59800
+Verificado: NÃO
+
+[11] Subra
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+URL: https://k.kwai.com/u/@subra552/z7EZquCl
+Email: N/A
+Nome de Usuário: subra552
+Nome de Exibição: Subra
+Foto/Avatar: https://aws-br-pic.kwai.net/bs2/overseaHead/20251026024617_BMTUwMDAxNzE0Mjc5NDEz_s.jpg
+Seguidores: 5814
+Curtidas: 53948
+Verificado: NÃO
+
+[12] olvyy
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+URL: https://k.kwai.com/u/@subra735/1wwCWefi
+Email: N/A
+Nome de Usuário: subra735
+Nome de Exibição: olvyy
+Foto/Avatar: https://aws-br-pic.kwai.net/bs2/overseaHead/20251026045621_BMTUwMDAxNzE0MjkxNjI3_s.jpg
+Seguidores: 5669
+Curtidas: 52734
+Verificado: NÃO
+
+[13] vitt
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+URL: https://k.kwai.com/u/@hfhjbgj/j6uGFuCG
+Email: N/A
+Nome de Usuário: hfhjbgj
+Nome de Exibição: vitt
+Foto/Avatar: https://aws-br-pic.kwai.net/bs2/overseaHead/20251026051017_BMTUwMDAxNzE0MjkyODkw_s.jpg
+Seguidores: 5563
+Curtidas: 51747
+Verificado: NÃO
+
+[14] hawk
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+URL: https://k.kwai.com/u/@hfnvk/HuNG6ZC2
+Email: N/A
+Nome de Usuário: hfnvk
+Nome de Exibição: hawk
+Foto/Avatar: https://aws-br-pic.kwai.net/bs2/overseaHead/20251026051814_BMTUwMDAxNzE0MjkzODEz_s.jpg
+Seguidores: 5784
+Curtidas: 53989
+Verificado: NÃO
+
+[15] mecst
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+URL: https://k.kwai.com/u/@myclerobert117/UuWCIIvL
+Email: N/A
+Nome de Usuário: myclerobert117
+Nome de Exibição: mecst
+Foto/Avatar: https://aws-br-pic.kwai.net/bs2/overseaHead/20251026055037_BMTUwMDAxNzE0Mjk2NzM4_s.jpg
+Seguidores: 5367
+Curtidas: 50216
+Verificado: NÃO
+
+[16] ellen
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+URL: https://k.kwai.com/u/@myclerobert031/uC1Y4Tk4
+Email: N/A
+Nome de Usuário: myclerobert031
+Nome de Exibição: ellen
+Foto/Avatar: https://aws-br-pic.kwai.net/bs2/overseaHead/20251026060727_BMTUwMDAxNzE0Mjk4MTk3_s.jpg
+Seguidores: 5641
+Curtidas: 52706
+Verificado: NÃO
+
+[17] Farabi
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+URL: https://k.kwai.com/u/@farabi853/wNkyeTCh
+Email: N/A
+Nome de Usuário: farabi853
+Nome de Exibição: Farabi
+Foto/Avatar: https://aws-br-pic.kwai.net/bs2/overseaHead/20251026061700_BMTUwMDAxNzE0Mjk5MTIz_s.jpg
+Seguidores: 5636
+Curtidas: 52697
+Verificado: NÃO
+
+[18] Faruk
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+URL: https://k.kwai.com/u/@meyun863/CPuta9cC
+Email: N/A
+Nome de Usuário: meyun863
+Nome de Exibição: Faruk
+Foto/Avatar: https://aws-br-pic.kwai.net/bs2/overseaHead/20251026062416_BMTUwMDAxNzE0Mjk5NzY3_s.jpg
+Seguidores: 5111
+Curtidas: 47588
+Verificado: NÃO
+
+[19] milon
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+URL: https://k.kwai.com/u/@milonahmedkobi/CwoMxUgc
+Email: milonahmedkobir59@gmail.com
+Nome de Usuário: milonahmedkobi
+Nome de Exibição: milon
+Foto/Avatar: https://aws-br-pic.kwai.net/bs2/overseaHead/20251027024247_BMTUwMDAxNzE0NDE5NDg1_s.jpg
+Seguidores: 5148
+Curtidas: 48029
+Verificado: NÃO
+
+[20] Kalam
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+URL: https://k.kwai.com/u/@milonahmedkala/lBtvpJCL
+Email: milonahmedkalam5@gmail.com
+Nome de Usuário: milonahmedkala
+Nome de Exibição: Kalam
+Foto/Avatar: https://aws-br-pic.kwai.net/bs2/overseaHead/20251027025600_BMTUwMDAxNzE0NDIxMDUw_s.jpg
+Seguidores: 5404
+Curtidas: 49998
+Verificado: NÃO
+
+[21] Tamim
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+URL: https://k.kwai.com/u/@tamimahmed253/GRCv2if0
+Email: N/A
+Nome de Usuário: tamimahmed253
+Nome de Exibição: Tamim
+Foto/Avatar: https://aws-br-pic.kwai.net/bs2/overseaHead/20251027031935_BMTUwMDAxNzE0NDIzMzEy_s.jpg
+Seguidores: 4951
+Curtidas: 48374
+Verificado: NÃO
+
+[22] FOYSAL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+URL: https://k.kwai.com/u/@foysal978/bQmnVvCh
+Email: N/A
+Nome de Usuário: foysal978
+Nome de Exibição: FOYSAL
+Foto/Avatar: https://aws-br-pic.kwai.net/bs2/overseaHead/20251027033539_BMTUwMDAxNzE0NDI1ODY2_s.jpg
+Seguidores: 5341
+Curtidas: 49584
+Verificado: NÃO
+
+[23] Rana
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+URL: https://k.kwai.com/u/@ranaahmedshuvo790/fCwiConC
+Email: N/A
+Nome de Usuário: ranaahmedshuvo790
+Nome de Exibição: Rana
+Foto/Avatar: https://aws-br-pic.kwai.net/bs2/overseaHead/20251027042049_BMTUwMDAxNzE0NDI3Mjk3_s.jpg
+Seguidores: 5297
+Curtidas: 49130
+Verificado: NÃO
+
+[24] Emon
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+URL: https://k.kwai.com/u/@emonahmedbappi/FCs8kSMM
+Email: emonahmedbappi44@gmail.com
+Nome de Usuário: emonahmedbappi
+Nome de Exibição: Emon
+Foto/Avatar: https://aws-br-pic.kwai.net/bs2/overseaHead/20251027043612_BMTUwMDAxNzE0NDMyNjQz_s.jpg
+Seguidores: 5430
+Curtidas: 50327
+Verificado: NÃO
+
+[25] Naim
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+URL: https://k.kwai.com/u/@tamimahmednaim/tFC9DT2g
+Email: tamimahmednaim92@gmail.com
+Nome de Usuário: tamimahmednaim
+Nome de Exibição: Naim
+Foto/Avatar: https://aws-br-pic.kwai.net/bs2/overseaHead/20251027044858_BMTUwMDAxNzE0NDM0MDk0_s.jpg
+Seguidores: 5291
+Curtidas: 49213
+Verificado: NÃO
+
+[26] tyla
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+URL: https://k.kwai.com/u/@ranaahmednaim/zwuNlCv8
+Email: ranaahmednaim@gmail.com
+Nome de Usuário: ranaahmednaim
+Nome de Exibição: tyla
+Foto/Avatar: https://aws-br-pic.kwai.net/bs2/overseaHead/20251027050723_BMTUwMDAxNzE0NDM2MDQ0_s.jpg
+Seguidores: 5193
+Curtidas: 48415
+Verificado: NÃO
+
+[27] Firoz
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+URL: https://k.kwai.com/u/@firozaheadmasu/toZrACmS
+Email: firozaheadmasud@gmail.com
+Nome de Usuário: firozaheadmasu
+Nome de Exibição: Firoz
+Foto/Avatar: https://aws-br-pic.kwai.net/bs2/overseaHead/20251027051924_BMTUwMDAxNzE0NDM3NDQ1_s.jpg
+Seguidores: 5240
+Curtidas: 48928
+Verificado: NÃO
+
+[28] med77
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+URL: https://k.kwai.com/u/@tamimahmedmahi/tjQHJ0Cc
+Email: tamimahmedmahim5@gmail.com
+Nome de Usuário: tamimahmedmahi
+Nome de Exibição: med77
+Foto/Avatar: https://aws-br-pic.kwai.net/bs2/overseaHead/20251027053124_BMTUwMDAxNzE0NDM4NzY4_s.jpg
+Seguidores: 5382
+Curtidas: 50009
+Verificado: NÃO
+
+[29] SABRI
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+URL: https://k.kwai.com/u/@sabbirahmedmaf/vMpvyCeG
+Email: sabbirahmedmafuz01@gmail.com
+Nome de Usuário: sabbirahmedmaf
+Nome de Exibição: SABRI
+Foto/Avatar: https://aws-br-pic.kwai.net/bs2/overseaHead/20251027054524_BMTUwMDAxNzE0NDQwNDE3_s.jpg
+Seguidores: 5027
+Curtidas: 47134
+Verificado: NÃO
+
+[30] Bajiy
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+URL: https://k.kwai.com/u/@bajiyahmedshuv/L3ubrCvx
+Email: bajiyahmedshuvo@gmail.com
+Nome de Usuário: bajiyahmedshuv
+Nome de Exibição: Bajiy
+Foto/Avatar: https://aws-br-pic.kwai.net/bs2/overseaHead/20251027055552_BMTUwMDAxNzE0NDQxNjMw_s.jpg
+Seguidores: 5527
+Curtidas: 51196
+Verificado: NÃO
+
+[31] Bappi
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+URL: https://k.kwai.com/u/@bajiyahmedbapp/CwFNrvHp
+Email: bajiyahmedbappi@gmail.com
+Nome de Usuário: bajiyahmedbapp
+Nome de Exibição: Bappi
+Foto/Avatar: https://aws-br-pic.kwai.net/bs2/overseaHead/20251027061214_BMTUwMDAxNzE0NDQzNTk1_s.jpg
+Seguidores: 5042
+Curtidas: 47158
+Verificado: NÃO
+
+[32] Lemon
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+URL: https://k.kwai.com/u/@lemonahmed134/Dhu0cC3q
+Email: N/A
+Nome de Usuário: lemonahmed134
+Nome de Exibição: Lemon
+Foto/Avatar: https://aws-br-pic.kwai.net/bs2/overseaHead/20251027062604_BMTUwMDAxNzE0NDQ1MjY4_s.jpg
+Seguidores: 5585
+Curtidas: 51576
+Verificado: NÃO
+
+[33] edmond
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+URL: https://k.kwai.com/u/@kingestonedmon/hNuCQgfT
+Email: kingestonedmond@gmail.com
+Nome de Usuário: kingestonedmon
+Nome de Exibição: edmond
+Foto/Avatar: https://aws-br-pic.kwai.net/bs2/overseaHead/20251027064846_BMTUwMDAxNzE0NDQ3ODk0_s.jpg
+Seguidores: 5249
+Curtidas: 48924
+Verificado: NÃO
+
+[34] Laura
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+URL: https://k.kwai.com/u/@laurabrooklynn204/5uCQtpAN
+Email: N/A
+Nome de Usuário: laurabrooklynn204
+Nome de Exibição: Laura
+Foto/Avatar: https://aws-br-pic.kwai.net/bs2/overseaHead/20251027070145_BMTUwMDAxNzE0NDQ5NTg0_s.jpg
+Seguidores: 5152
+Curtidas: 48151
+Verificado: NÃO
+
+[35] Maev
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+URL: https://k.kwai.com/u/@maevparkinson/7CCvLgdR
+Email: maevparkinson@gmail.com
+Nome de Usuário: maevparkinson
+Nome de Exibição: Maev
+Foto/Avatar: https://aws-br-pic.kwai.net/bs2/overseaHead/20251027071631_BMTUwMDAxNzE0NDUxMzM1_s.jpg
+Seguidores: 5225
+Curtidas: 48778
+Verificado: NÃO
+
+[36] Zion
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+URL: https://k.kwai.com/u/@albertocalvinz/nv1wC3Wf
+Email: albertocalvinzion@gmail.com
+Nome de Usuário: albertocalvinz
+Nome de Exibição: Zion
+Foto/Avatar: https://aws-br-pic.kwai.net/bs2/overseaHead/20251027072859_BMTUwMDAxNzE0NDUyODAy_s.jpg
+Seguidores: 5034
+Curtidas: 49194
+Verificado: NÃO
+
+[37] lilia
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+URL: https://k.kwai.com/u/@lilia845/CUePGjv5
+Email: N/A
+Nome de Usuário: lilia845
+Nome de Exibição: lilia
+Foto/Avatar: https://aws-br-pic.kwai.net/bs2/overseaHead/20251026044636_BMTUwMDAxNzE0MjkwOTM2_s.jpg
+Seguidores: 4976
+Curtidas: 46081
+Verificado: NÃO
+
+[38] Mycle Robert
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+URL: https://k.kwai.com/u/@myclerobert/lBCB5LtH
+Email: N/A
+Nome de Usuário: myclerobert
+Nome de Exibição: Mycle Robert
+Foto/Avatar: https://aws-br-pic.kwai.net/bs2/overseaHead/20251026052914_BMTUwMDAxNzE0Mjk0NjI2_s.jpg
+Seguidores: 4964
+Curtidas: 46087
+Verificado: NÃO
+
+[39] Nick Santos
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+URL: https://k.kwai.com/u/@nicksantos761/TCaSAw8O
+Email: N/A
+Nome de Usuário: nicksantos761
+Nome de Exibição: Nick Santos
+Foto/Avatar: https://aws-br-pic.kwai.net/bs2/overseaHead/20251029022202_BMTUwMDAxNzE0NzQzNTk2_s.jpg
+Seguidores: 4317
+Curtidas: 40446
+Verificado: NÃO
+
+[40] Mkzim Santsnder
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+URL: https://k.kwai.com/u/@mkzimsantsnder/CzCmudUC
+Email: mkzimsantsnder@gmail.com
+Nome de Usuário: mkzimsantsnder
+Nome de Exibição: Mkzim Santsnder
+Foto/Avatar: https://aws-br-pic.kwai.net/bs2/overseaHead/20251029031342_BMTUwMDAxNzE0NzQ4NTUw_s.jpg
+Seguidores: 4361
+Curtidas: 40703
+Verificado: NÃO
+
+[41] Jansen Floor
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+URL: https://k.kwai.com/u/@jansenfloor/cVsCZCD3
+Email: N/A
+Nome de Usuário: jansenfloor
+Nome de Exibição: Jansen Floor
+Foto/Avatar: https://aws-br-pic.kwai.net/bs2/overseaHead/20251029032404_BMTUwMDAxNzE0NzQ5NDUy_s.jpg
+Seguidores: 4463
+Curtidas: 41451
+Verificado: NÃO
+
+[42] Floor Jansen
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+URL: https://k.kwai.com/u/@floorjansen/2esChvzz
+Email: N/A
+Nome de Usuário: floorjansen
+Nome de Exibição: Floor Jansen
+Foto/Avatar: https://aws-br-pic.kwai.net/bs2/overseaHead/20251029032947_BMTUwMDAxNzE0NzUwMDU3_s.jpg
+Seguidores: 4446
+Curtidas: 41454
+Verificado: NÃO
+
+[43] Bvxy Dhcx
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+URL: https://k.kwai.com/u/@bvxydhcx/rgK6WvCJ
+Email: N/A
+Nome de Usuário: bvxydhcx
+Nome de Exibição: Bvxy Dhcx
+Foto/Avatar: https://aws-br-pic.kwai.net/bs2/overseaHead/20251029033559_BMTUwMDAxNzE0NzUwNTg3_s.jpg
+Seguidores: 4156
+Curtidas: 39096
+Verificado: NÃO
+
+[44] Gsfvx Kvgkb
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+URL: https://k.kwai.com/u/@gsfvxkvgkb/rQswQ6C6
+Email: gsfvxkvgkb@gmail.com
+Nome de Usuário: gsfvxkvgkb
+Nome de Exibição: Gsfvx Kvgkb
+Foto/Avatar: https://aws-br-pic.kwai.net/bs2/overseaHead/20251029034236_BMTUwMDAxNzE0NzUxMTk0_s.jpg
+Seguidores: 4526
+Curtidas: 41928
+Verificado: NÃO
+
+[45] Mbcyf Anbxd
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+URL: https://k.kwai.com/u/@mbcyfanbxd/vRxJvzCw
+Email: N/A
+Nome de Usuário: mbcyfanbxd
+Nome de Exibição: Mbcyf Anbxd
+Foto/Avatar: https://aws-br-pic.kwai.net/bs2/overseaHead/20251029035144_BMTUwMDAxNzE0NzUxOTc4_s.jpg
+Seguidores: 4360
+Curtidas: 40689
+Verificado: NÃO
+
+[46] Bvxfss Iyfkbc
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+URL: https://k.kwai.com/u/@bvxfssiyfkbc/WswwCUFa
+Email: bvxfssiyfkbc@gmail.com
+Nome de Usuário: bvxfssiyfkbc
+Nome de Exibição: Bvxfss Iyfkbc
+Foto/Avatar: https://aws-br-pic.kwai.net/bs2/overseaHead/20251029035752_BMTUwMDAxNzE0NzUyNDk5_s.jpg
+Seguidores: 4524
+Curtidas: 42051
+Verificado: NÃO
+
+[47] Mbcjh Gjjczf
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+URL: https://k.kwai.com/u/@mbcjhgjjczf/eCwf4lCM
+Email: N/A
+Nome de Usuário: mbcjhgjjczf
+Nome de Exibição: Mbcjh Gjjczf
+Foto/Avatar: https://aws-br-pic.kwai.net/bs2/overseaHead/20251029040416_BMTUwMDAxNzE0NzUzMDcy_s.jpg
+Seguidores: 4412
+Curtidas: 41248
+Verificado: NÃO
+
+[48] Jvjnss Hwmvs
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+URL: https://k.kwai.com/u/@jvjnsshwmvs/dcCsL1ce
+Email: jvjnsshwmvs@gmail.com
+Nome de Usuário: jvjnsshwmvs
+Nome de Exibição: Jvjnss Hwmvs
+Foto/Avatar: https://aws-br-pic.kwai.net/bs2/overseaHead/20251029040945_BMTUwMDAxNzE0NzUzNTQ2_s.jpg
+Seguidores: 3990
+Curtidas: 37333
+Verificado: NÃO
+
+[49] Nhkvs Ujvks
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+URL: https://k.kwai.com/u/@nhkvsujvks/sS9iCru4
+Email: N/A
+Nome de Usuário: nhkvsujvks
+Nome de Exibição: Nhkvs Ujvks
+Foto/Avatar: https://aws-br-pic.kwai.net/bs2/overseaHead/20251029045105_BMTUwMDAxNzE0NzU2NzYz_s.jpg
+Seguidores: 4379
+Curtidas: 40939
+Verificado: NÃO
+
+[50] dert
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+URL: https://k.kwai.com/u/@dert834/CoaFvAaq
+Email: N/A
+Nome de Usuário: dert834
+Nome de Exibição: dert
+Foto/Avatar: https://aws-br-pic.kwai.net/bs2/overseaHead/20251029045354_BMTUwMDAxNzE0NjY5NzU1_s.jpg
+Seguidores: 4639
+Curtidas: 43062
+Verificado: NÃO
+
+[51] regis
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+URL: https://k.kwai.com/u/@idcqp088/yGuMCZU1
+Email: N/A
+Nome de Usuário: idcqp088
+Nome de Exibição: regis
+Foto/Avatar: https://aws-br-pic.kwai.net/bs2/overseaHead/20251029051657_BMTUwMDAxNzE0NjcwNDYx_s.jpg
+Seguidores: 4395
+Curtidas: 40951
+Verificado: NÃO
+
+[52] kelly
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+URL: https://k.kwai.com/u/@lvdok089/wt78CaIT
+Email: N/A
+Nome de Usuário: lvdok089
+Nome de Exibição: kelly
+Foto/Avatar: https://aws-br-pic.kwai.net/bs2/overseaHead/20251029051809_BMTUwMDAxNzE0NjcxMDAx_s.jpg
+Seguidores: 4357
+Curtidas: 40847
+Verificado: NÃO
+
+[53] lorena
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+URL: https://kwai-video.com/u/@efuzm973/kvLgwvCl
+Email: N/A
+Nome de Usuário: efuzm973
+Nome de Exibição: lorena
+Foto/Avatar: https://aws-br-pic.kwai.net/bs2/overseaHead/20251029052342_BMTUwMDAxNzE0NjcxOTk3_s.jpg
+Seguidores: 4555
+Curtidas: 42206
+Verificado: NÃO
+
+[54] kaik
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+URL: https://k.kwai.com/u/@kaik820/C2tAyPxk
+Email: N/A
+Nome de Usuário: kaik820
+Nome de Exibição: kaik
+Foto/Avatar: https://aws-br-pic.kwai.net/bs2/overseaHead/20251029053015_BMTUwMDAxNzE0NjcyNzYz_s.jpg
+Seguidores: 4635
+Curtidas: 42976
+Verificado: NÃO
+
+[55] marc
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+URL: https://k.kwai.com/u/@marc656/lterHCbP
+Email: N/A
+Nome de Usuário: marc656
+Nome de Exibição: marc
+Foto/Avatar: https://aws-br-pic.kwai.net/bs2/overseaHead/20251029053352_BMTUwMDAxNzE0NjczMDU0_s.jpg
+Seguidores: 4365
+Curtidas: 40680
+Verificado: NÃO
+
+[56] veig
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+URL: https://k.kwai.com/u/@veig543/5uCKCYsX
+Email: N/A
+Nome de Usuário: veig543
+Nome de Exibição: veig
+Foto/Avatar: https://aws-br-pic.kwai.net/bs2/overseaHead/20251029055501_BMTUwMDAxNzE0NjczMjY0_s.jpg
+Seguidores: 4520
+Curtidas: 41869
+Verificado: NÃO
+
+[57] xeig
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+URL: https://k.kwai.com/u/@xeig256/snC8flJA
+Email: N/A
+Nome de Usuário: xeig256
+Nome de Exibição: xeig
+Foto/Avatar: https://aws-br-pic.kwai.net/bs2/overseaHead/20251029060012_BMTUwMDAxNzE0NjczNDc4_s.jpg
+Seguidores: 4494
+Curtidas: 41660
+Verificado: NÃO
+
+[58] sand
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+URL: https://k.kwai.com/u/@sand174/TpqCSt6f
+Email: N/A
+Nome de Usuário: sand174
+Nome de Exibição: sand
+Foto/Avatar: https://aws-br-pic.kwai.net/bs2/overseaHead/20251029060612_BMTUwMDAxNzE0NjczODY4_s.jpg
+Seguidores: 4387
+Curtidas: 40967
+Verificado: NÃO
+
+[59] gelio
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+URL: https://k.kwai.com/u/@gelio068/hGjspCuK
+Email: N/A
+Nome de Usuário: gelio068
+Nome de Exibição: gelio
+Foto/Avatar: https://aws-br-pic.kwai.net/bs2/overseaHead/20251029060752_BMTUwMDAxNzE0Njc0Mjk3_s.jpg
+Seguidores: 4592
+Curtidas: 42594
+Verificado: NÃO
+
+[60] lira
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+URL: https://k.kwai.com/u/@lira167/CeA1Ewsu
+Email: N/A
+Nome de Usuário: lira167
+Nome de Exibição: lira
+Foto/Avatar: https://aws-br-pic.kwai.net/bs2/overseaHead/20251029061344_BMTUwMDAxNzE0Njc0NjU0_s.jpg
+Seguidores: 4216
+Curtidas: 39542
+Verificado: NÃO
+
+[61] july
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+URL: https://k.kwai.com/u/@dxkio885/CuRyIkP6
+Email: N/A
+Nome de Usuário: dxkio885
+Nome de Exibição: july
+Foto/Avatar: https://aws-br-pic.kwai.net/bs2/overseaHead/20251029075109_BMTUwMDAxNzE0NzY5MzI2_s.jpg
+Seguidores: 4561
+Curtidas: 42236
+Verificado: NÃO
+
+[62] rena
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+URL: https://k.kwai.com/u/@pqvho150/KsCsasbF
+Email: N/A
+Nome de Usuário: pqvho150
+Nome de Exibição: rena
+Foto/Avatar: https://aws-br-pic.kwai.net/bs2/overseaHead/20251029075431_BMTUwMDAxNzE0NzcyNDU1_s.jpg
+Seguidores: 4584
+Curtidas: 42372
+Verificado: NÃO
+
+[63] nando
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+URL: https://k.kwai.com/u/@ztori021/Crkaup8N
+Email: N/A
+Nome de Usuário: ztori021
+Nome de Exibição: nando
+Foto/Avatar: https://aws-br-pic.kwai.net/bs2/overseaHead/20251029075854_BMTUwMDAxNzE0NzczNjUw_s.jpg
+Seguidores: 4442
+Curtidas: 41478
+Verificado: NÃO
+
+[64] luddds
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+URL: https://k.kwai.com/u/@luddds/bCvtRTeI
+Email: N/A
+Nome de Usuário: luddds
+Nome de Exibição: luddds
+Foto/Avatar: https://aws-br-pic.kwai.net/bs2/overseaHead/20251029080235_BMTUwMDAxNzE0Nzc0NTU3_s.jpg
+Seguidores: 4313
+Curtidas: 40420
+Verificado: NÃO
+
+═══════════════════════════════════════════════════════════
+RESUMO ESTATÍSTICO
+═══════════════════════════════════════════════════════════
+
+Total de Seguidores: 333.817
+Total de Curtidas: 3.112.841
+Perfis Verificados: 0/64
+
+═══════════════════════════════════════════════════════════
+Fim do Relatório
+═══════════════════════════════════════════════════════════
