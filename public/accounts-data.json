@@ -84,14 +84,6 @@
       "id": "12"
     },
     {
-      "email": "ssss01082090@gmail.com",
-      "password": "kwai202022",
-      "name": "olv",
-      "followers": "2.5K",
-      "verified": true,
-      "id": "14"
-    },
-    {
       "email": "imran9999190@gmail.com",
       "password": "kwai202022",
       "name": "vitt",
@@ -530,5 +522,5 @@
       "id": "67"
     }
   ],
-  "lastUpdated": "2025-11-13T00:29:18.063Z"
+  "lastUpdated": "2025-11-13T01:14:49.640Z"
 }
