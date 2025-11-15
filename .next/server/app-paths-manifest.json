@@ -1,8 +1,5 @@
 {
   "/login/page": "app/login/page.js",
-  "/page": "app/page.js",
-  "/api/analyze/route": "app/api/analyze/route.js",
-  "/api/load-last-history/route": "app/api/load-last-history/route.js",
   "/api/catalog-config/route": "app/api/catalog-config/route.js",
-  "/api/save-history/route": "app/api/save-history/route.js"
+  "/page": "app/page.js"
 }
