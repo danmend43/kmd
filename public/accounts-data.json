@@ -132,14 +132,6 @@
       "id": "22"
     },
     {
-      "email": "milonahmedkalam5@gmail.com",
-      "password": "kwai202022",
-      "name": "Kalam",
-      "followers": "2.1K",
-      "verified": true,
-      "id": "23"
-    },
-    {
       "email": "tamimahmedsj21@gmail.com",
       "password": "kwai202022",
       "name": "Tamim",
@@ -514,5 +506,5 @@
       "id": "67"
     }
   ],
-  "lastUpdated": "2025-11-17T12:59:23.214Z"
+  "lastUpdated": "2025-11-17T21:53:39.529Z"
 }
