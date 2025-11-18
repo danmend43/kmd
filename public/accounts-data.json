@@ -268,14 +268,6 @@
       "id": "41"
     },
     {
-      "email": "nicksantos9615@gmail.com",
-      "password": "kwai202022",
-      "name": "Nick Santos",
-      "followers": "1.1K",
-      "verified": true,
-      "id": "42"
-    },
-    {
       "email": "mkzimsantsnder@gmail.com",
       "password": "kwai202022",
       "name": "Mkzim Santsnder",
@@ -506,5 +498,5 @@
       "id": "67"
     }
   ],
-  "lastUpdated": "2025-11-18T16:40:24.640Z"
+  "lastUpdated": "2025-11-18T19:17:36.533Z"
 }
