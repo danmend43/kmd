@@ -1,13 +1,12 @@
 {
   "catalogs": [
     {
-      "link": "94a6897f329906e67a9510743ae8e701",
-      "number": "997771",
+      "link": "0b7e9733d5346d005331ed0186b5c591",
+      "number": "972171",
       "name": "Contas do Kwai",
-      "createdAt": "2025-11-18T19:28:04.704Z",
+      "createdAt": "2025-11-19T08:48:31.927Z",
       "active": true,
       "selectedGroups": [
-        "5k",
         "6k"
       ]
     }
