@@ -1,13 +1,24 @@
 {
   "catalogs": [
     {
-      "link": "0b7e9733d5346d005331ed0186b5c591",
-      "number": "972171",
+      "link": "f115f1503a3316a8e4d03bd18c77a153",
+      "number": "859059",
       "name": "Contas do Kwai",
-      "createdAt": "2025-11-19T08:48:31.927Z",
+      "createdAt": "2025-11-20T23:57:33.711Z",
       "active": true,
       "selectedGroups": [
+        "7k",
         "6k"
+      ]
+    },
+    {
+      "link": "c0693aa150a42a2526825f42a7d23f94",
+      "number": "876617",
+      "name": "Contas do Kwai",
+      "createdAt": "2025-11-20T23:58:01.695Z",
+      "active": true,
+      "selectedGroups": [
+        "8k"
       ]
     }
   ]

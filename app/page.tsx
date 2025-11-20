@@ -213,7 +213,7 @@ export default function Home() {
   const [loading, setLoading] = useState(false)
   const [progress, setProgress] = useState({ current: 0, total: 0 })
   const [error, setError] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'followers' | 'accounts' | 'urls' | 'history' | 'calendar' | 'groups' | 'postagem' | 'catalog-config' | 'config'>('dashboard')
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'followers' | 'accounts' | 'urls' | 'history' | 'calendar' | 'groups' | 'postagem' | 'catalog-config' | 'config' | 'valores'>('dashboard')
   const [catalogConfig, setCatalogConfig] = useState({ 
     selectedGroups: [] as string[]
   })
@@ -243,6 +243,7 @@ export default function Home() {
   const [historyProfiles, setHistoryProfiles] = useState<ProfileData[]>([])
   const [accounts, setAccounts] = useState<AccountData[]>([])
   const [editingAccountIndex, setEditingAccountIndex] = useState<number | null>(null)
+  const [valores, setValores] = useState<{ [key: string]: number }>({}) // { '1k': 10, '2k': 20, etc }
 
   // Salvar URLs no arquivo
   const saveUrls = async (urlsToSave: string[]) => {
@@ -700,6 +701,46 @@ export default function Home() {
     loadLatestHistory()
   }, [activeTab])
 
+  // Carregar valores quando a aba de valores é aberta
+  useEffect(() => {
+    const loadValores = async () => {
+      if (activeTab === 'valores') {
+        try {
+          const response = await fetch('/api/valores')
+          if (response.ok) {
+            const data = await response.json()
+            if (data.valores) {
+              setValores(data.valores)
+            }
+          }
+        } catch (e) {
+          console.error('Erro ao carregar valores:', e)
+        }
+      }
+    }
+    
+    loadValores()
+  }, [activeTab])
+
+  // Carregar valores no dashboard também
+  useEffect(() => {
+    const loadValoresForDashboard = async () => {
+      try {
+        const response = await fetch('/api/valores')
+        if (response.ok) {
+          const data = await response.json()
+          if (data.valores) {
+            setValores(data.valores)
+          }
+        }
+      } catch (e) {
+        console.error('Erro ao carregar valores:', e)
+      }
+    }
+    
+    loadValoresForDashboard()
+  }, [])
+
   // Agrupar contas por faixa de seguidores
   const groupedAccounts = (): { [key: string]: ProfileData[] } => {
     // Prioridade: groupsProfiles (mais atualizado) > historyProfiles > profiles
@@ -719,6 +760,20 @@ export default function Home() {
     })
     
     return groups
+  }
+
+  // Calcular total de dinheiro baseado nos grupos e valores cadastrados
+  const calculateTotalMoney = (): number => {
+    const groups = groupedAccounts()
+    let total = 0
+    
+    Object.keys(groups).forEach(groupName => {
+      const accountCount = groups[groupName].length
+      const valuePerAccount = valores[groupName] || 0
+      total += accountCount * valuePerAccount
+    })
+    
+    return total
   }
 
 
@@ -1238,6 +1293,7 @@ export default function Home() {
               { id: 'history', label: 'Histórico', icon: '📝' },
               { id: 'calendar', label: 'Calendário', icon: '📅' },
               { id: 'groups', label: 'Grupos', icon: '👥' },
+              { id: 'valores', label: 'Valores', icon: '💰' },
               { id: 'postagem', label: 'Postagem do Dia', icon: '📄' },
               { id: 'catalog-config', label: 'Configurar Catálogo', icon: '🎨' },
               { id: 'config', label: 'Config', icon: '⚙️' },
@@ -1276,6 +1332,24 @@ export default function Home() {
                       <span className="badge-new badge-red">
                         Inválidos: <strong>{invalidProfilesCount}</strong>
                       </span>
+                    )}
+                  </div>
+
+                  {/* Total de Dinheiro */}
+                  <div className="mb-6 p-6 bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl shadow-lg">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-white/90 text-sm font-medium mb-1">💰 Total em Contas</p>
+                        <p className="text-white text-3xl font-bold">
+                          R$ {calculateTotalMoney().toFixed(2).replace('.', ',')}
+                        </p>
+                      </div>
+                      <div className="text-5xl">💰</div>
+                    </div>
+                    {Object.keys(valores).length === 0 && (
+                      <p className="text-white/80 text-xs mt-2">
+                        Configure os valores na aba "Valores" para ver o total calculado
+                      </p>
                     )}
                   </div>
 
@@ -2802,6 +2876,105 @@ export default function Home() {
                     </div>
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* Valores Tab */}
+            {activeTab === 'valores' && (
+              <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
+                <h2 className="text-2xl font-bold text-gray-800 mb-6">💰 Valores por Grupo</h2>
+                <p className="text-sm text-gray-600 mb-6">
+                  Configure o valor em reais para cada grupo de seguidores. O sistema calculará automaticamente o total baseado na quantidade de contas em cada grupo.
+                </p>
+                
+                <div className="space-y-4 mb-6">
+                  {(() => {
+                    const groups = groupedAccounts()
+                    const groupNames = Object.keys(groups).sort((a, b) => {
+                      if (a === 'inicio') return -1
+                      if (b === 'inicio') return 1
+                      const numA = parseInt(a.replace('k', '')) || 0
+                      const numB = parseInt(b.replace('k', '')) || 0
+                      return numA - numB
+                    })
+
+                    if (groupNames.length === 0) {
+                      return (
+                        <p className="text-sm text-gray-500 text-center py-4">
+                          Nenhum grupo disponível. Execute a análise primeiro.
+                        </p>
+                      )
+                    }
+
+                    return (
+                      <div className="space-y-3">
+                        {groupNames.map((groupName) => {
+                          const accountCount = groups[groupName].length
+                          const currentValue = valores[groupName] || 0
+                          
+                          return (
+                            <div
+                              key={groupName}
+                              className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg border border-gray-200"
+                            >
+                              <div className="flex-1">
+                                <div className="font-bold text-gray-800 mb-1">
+                                  {groupName === 'inicio' ? '< 1k' : groupName.toUpperCase()}
+                                </div>
+                                <div className="text-sm text-gray-600">
+                                  {accountCount} conta(s)
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm text-gray-700 font-medium">R$</span>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  step="0.01"
+                                  value={currentValue}
+                                  onChange={(e) => {
+                                    const newValue = parseFloat(e.target.value) || 0
+                                    setValores({
+                                      ...valores,
+                                      [groupName]: newValue
+                                    })
+                                  }}
+                                  className="w-32 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                  placeholder="0.00"
+                                />
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )
+                  })()}
+                </div>
+
+                <button
+                  onClick={async () => {
+                    try {
+                      const response = await fetch('/api/valores', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ valores }),
+                      })
+                      
+                      if (response.ok) {
+                        alert('Valores salvos com sucesso!')
+                      } else {
+                        const errorData = await response.json()
+                        alert(errorData.error || 'Erro ao salvar valores')
+                      }
+                    } catch (e) {
+                      console.error('Erro ao salvar valores:', e)
+                      alert('Erro ao conectar com o servidor')
+                    }
+                  }}
+                  className="w-full px-6 py-3 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-all"
+                >
+                  💾 Salvar Valores
+                </button>
               </div>
             )}
 
