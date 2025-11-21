@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { postingData, addToHistory, removeFromHistory } = await request.json()
+    const { postingData, addToHistory, updateHistory, removeFromHistory } = await request.json()
 
     if (removeFromHistory !== undefined) {
       // Remover do histórico
@@ -84,16 +84,51 @@ export async function POST(request: NextRequest) {
 
     let historyEntry = null
 
-    // Processar addToHistory primeiro (se existir)
-    if (addToHistory) {
-      // Adicionar ao histórico quando completar
-      let history = []
-      if (existsSync(postingHistoryPath)) {
-        const historyContent = await readFile(postingHistoryPath, 'utf-8')
-        const historyData = JSON.parse(historyContent)
-        history = historyData.history || []
+    // Carregar histórico uma vez
+    let history = []
+    if (existsSync(postingHistoryPath)) {
+      const historyContent = await readFile(postingHistoryPath, 'utf-8')
+      const historyData = JSON.parse(historyContent)
+      history = historyData.history || []
+    }
+
+    // Processar updateHistory primeiro (se existir) - atualizar registro existente
+    if (updateHistory) {
+      const index = updateHistory.index
+      if (index >= 0 && index < history.length) {
+        // Atualizar registro existente
+        history[index] = {
+          ...history[index],
+          groups: updateHistory.groups || history[index].groups || [],
+          totalAccounts: updateHistory.totalAccounts || history[index].totalAccounts || 0,
+          endTime: updateHistory.endTime || history[index].endTime
+        }
+        historyEntry = history[index]
+      } else {
+        // Tentar encontrar pela data
+        const todayDate = getTodayDate()
+        const existingIndex = history.findIndex((item: any) => item.date === todayDate)
+        if (existingIndex >= 0) {
+          history[existingIndex] = {
+            ...history[existingIndex],
+            groups: updateHistory.groups || history[existingIndex].groups || [],
+            totalAccounts: updateHistory.totalAccounts || history[existingIndex].totalAccounts || 0,
+            endTime: updateHistory.endTime || history[existingIndex].endTime
+          }
+          historyEntry = history[existingIndex]
+        }
       }
       
+      const historyDir = path.dirname(postingHistoryPath)
+      if (!existsSync(historyDir)) {
+        await mkdir(historyDir, { recursive: true })
+      }
+      
+      await writeFile(postingHistoryPath, JSON.stringify({ history }, null, 2), 'utf-8')
+    }
+    // Processar addToHistory (se existir e não foi atualizado)
+    else if (addToHistory) {
+      // Adicionar ao histórico quando completar
       // Sempre usar a data atual do servidor (timezone local) para evitar problemas
       const now = new Date()
       const todayDate = getTodayDate() // Formato YYYY-MM-DD baseado no timezone local
@@ -104,7 +139,7 @@ export async function POST(request: NextRequest) {
         startTime: addToHistory.startTime || now.toISOString(),
         endTime: addToHistory.endTime || now.toISOString(),
         totalAccounts: addToHistory.totalAccounts || 0,
-        selectedGroup: addToHistory.selectedGroup || undefined
+        groups: addToHistory.groups || []
       }
       
       history.unshift(historyEntry)
@@ -132,7 +167,7 @@ export async function POST(request: NextRequest) {
       await writeFile(postingFilePath, JSON.stringify(data, null, 2), 'utf-8')
     }
 
-    // Retornar resposta incluindo historyEntry se foi criado
+    // Retornar resposta incluindo historyEntry se foi criado ou atualizado
     const response: any = { 
       success: true, 
       message: 'Dados salvos com sucesso'
@@ -140,6 +175,11 @@ export async function POST(request: NextRequest) {
     
     if (historyEntry) {
       response.historyEntry = historyEntry
+    }
+    
+    // Se foi atualização, retornar também o histórico completo
+    if (updateHistory) {
+      response.history = history
     }
 
     return NextResponse.json(response)

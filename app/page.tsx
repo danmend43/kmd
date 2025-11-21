@@ -220,8 +220,8 @@ export default function Home() {
   const [catalogs, setCatalogs] = useState<Array<{ link: string, number: string, name: string, createdAt: string, active: boolean, selectedGroups?: string[] }>>([])
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null)
   const [dailyPostingGroup, setDailyPostingGroup] = useState<string | null>(null) // Grupo selecionado na postagem do dia
-  const [dailyPosting, setDailyPosting] = useState<{ [key: string]: { selected: string[], startTime?: string, endTime?: string, completed?: boolean, selectedGroup?: string } }>({})
-  const [postingHistory, setPostingHistory] = useState<Array<{ date: string, startTime: string, endTime: string, totalAccounts: number, selectedGroup?: string }>>([])
+  const [dailyPosting, setDailyPosting] = useState<{ [key: string]: { groups: { [groupName: string]: { selected: string[], startTime?: string, endTime?: string } }, calendarMarked?: boolean } }>({})
+  const [postingHistory, setPostingHistory] = useState<Array<{ date: string, startTime: string, endTime: string, totalAccounts: number, groups: string[] }>>([])
   const [sequences, setSequences] = useState<{ [key: string]: number }>({})
   const [markedDays, setMarkedDays] = useState<{ [key: string]: boolean }>({})
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
@@ -244,6 +244,20 @@ export default function Home() {
   const [accounts, setAccounts] = useState<AccountData[]>([])
   const [editingAccountIndex, setEditingAccountIndex] = useState<number | null>(null)
   const [valores, setValores] = useState<{ [key: string]: number }>({}) // { '1k': 10, '2k': 20, etc }
+  const [taxa, setTaxa] = useState<number>(15.98) // Taxa em porcentagem
+  const [urlsOriginal, setUrlsOriginal] = useState<string[]>([]) // URLs originais para reiniciar
+  const [urlsProcessed, setUrlsProcessed] = useState<Set<number>>(new Set()) // Índices das URLs processadas
+  const [customGroups, setCustomGroups] = useState<{ [groupName: string]: { emails: string[], coverImage?: string } }>({}) // { "meta": { emails: ["email1"], coverImage: "url" } }
+  const [accountGroups, setAccountGroups] = useState<{ [email: string]: string }>({}) // { "email": "nomeDoGrupo" }
+  const [showCreateGroupModal, setShowCreateGroupModal] = useState(false)
+  const [newGroupName, setNewGroupName] = useState('')
+  const [pendingMoveEmail, setPendingMoveEmail] = useState<string | null>(null) // Email da conta que será movida após criar grupo
+  const [editingGroupCover, setEditingGroupCover] = useState<string | null>(null) // Nome do grupo sendo editado (pode ser custom- ou grupo original)
+  const [groupCoverImage, setGroupCoverImage] = useState<string>('') // Base64 da imagem
+  const [editingGroupName, setEditingGroupName] = useState<string>('') // Nome do grupo sendo editado (para grupos personalizados)
+  const [groupCovers, setGroupCovers] = useState<{ [groupName: string]: string }>({}) // Capas de todos os grupos
+  const [duplicateAccount, setDuplicateAccount] = useState<AccountData | null>(null) // Conta duplicada encontrada
+  const [duplicateAccountProfile, setDuplicateAccountProfile] = useState<ProfileData | null>(null) // Perfil da conta duplicada
 
   // Salvar URLs no arquivo
   const saveUrls = async (urlsToSave: string[]) => {
@@ -352,6 +366,7 @@ export default function Home() {
           const data = await response.json()
           if (data.urls && data.urls.length > 0) {
             setUrls(data.urls)
+            setUrlsOriginal(data.urls) // Salvar URLs originais
             console.log('URLs carregadas do arquivo:', data.urls.length)
           } else {
             // Se não há URLs salvas, salvar as padrão
@@ -365,6 +380,7 @@ export default function Home() {
               return url
             })
             setUrls(initialUrls)
+            setUrlsOriginal(initialUrls) // Salvar URLs originais
             saveUrls(initialUrls)
           }
         }
@@ -473,14 +489,36 @@ export default function Home() {
         if (response.ok) {
           const data = await response.json()
           if (data.postingData) {
-            setDailyPosting(data.postingData)
-            // Restaurar o grupo selecionado do dia atual
-            const today = new Date().toISOString().split('T')[0]
-            const todayData = data.postingData[today]
+            // Migrar estrutura antiga para nova se necessário
+            const migratedData: { [key: string]: { groups: { [groupName: string]: { selected: string[], startTime?: string, endTime?: string } }, calendarMarked?: boolean } } = {}
             
+            Object.keys(data.postingData).forEach(date => {
+              const dayData = data.postingData[date]
+              // Se tem estrutura antiga (selected array), migrar
+              if (dayData.selected && Array.isArray(dayData.selected)) {
+                // Estrutura antiga - não podemos migrar perfeitamente, então resetar
+                migratedData[date] = { groups: {}, calendarMarked: dayData.calendarMarked || false }
+              } else {
+                // Estrutura nova
+                migratedData[date] = dayData
+              }
+            })
+            
+            setDailyPosting(migratedData)
           }
           if (data.history) {
-            setPostingHistory(data.history)
+            // Migrar histórico se necessário
+            const migratedHistory = data.history.map((item: any) => {
+              if (item.groups && Array.isArray(item.groups)) {
+                return item // Já está na estrutura nova
+              }
+              // Estrutura antiga - converter
+              return {
+                ...item,
+                groups: item.selectedGroup ? [item.selectedGroup] : []
+              }
+            })
+            setPostingHistory(migratedHistory)
           }
         }
       } catch (e) {
@@ -701,6 +739,48 @@ export default function Home() {
     loadLatestHistory()
   }, [activeTab])
 
+  // Carregar grupos personalizados quando a aba de grupos ou postagem é aberta
+  useEffect(() => {
+    const loadCustomGroups = async () => {
+      if (activeTab === 'groups' || activeTab === 'postagem') {
+        try {
+          const response = await fetch('/api/custom-groups')
+          if (response.ok) {
+            const data = await response.json()
+            if (data.customGroups) {
+              // Converter estrutura antiga para nova se necessário
+              const convertedGroups: { [key: string]: { emails: string[], coverImage?: string } } = {}
+              Object.keys(data.customGroups).forEach(groupName => {
+                const groupData = data.customGroups[groupName]
+                if (Array.isArray(groupData)) {
+                  // Estrutura antiga: array de emails
+                  convertedGroups[groupName] = { emails: groupData, coverImage: '' }
+                } else {
+                  // Estrutura nova: objeto com emails e coverImage
+                  convertedGroups[groupName] = {
+                    emails: groupData.emails || [],
+                    coverImage: groupData.coverImage || ''
+                  }
+                }
+              })
+              setCustomGroups(convertedGroups)
+            }
+            if (data.accountGroups) {
+              setAccountGroups(data.accountGroups)
+            }
+            if (data.groupCovers) {
+              setGroupCovers(data.groupCovers)
+            }
+          }
+        } catch (e) {
+          console.error('Erro ao carregar grupos personalizados:', e)
+        }
+      }
+    }
+    
+    loadCustomGroups()
+  }, [activeTab])
+
   // Carregar valores quando a aba de valores é aberta
   useEffect(() => {
     const loadValores = async () => {
@@ -711,6 +791,9 @@ export default function Home() {
             const data = await response.json()
             if (data.valores) {
               setValores(data.valores)
+            }
+            if (data.taxa !== undefined) {
+              setTaxa(data.taxa)
             }
           }
         } catch (e) {
@@ -732,6 +815,9 @@ export default function Home() {
           if (data.valores) {
             setValores(data.valores)
           }
+          if (data.taxa !== undefined) {
+            setTaxa(data.taxa)
+          }
         }
       } catch (e) {
         console.error('Erro ao carregar valores:', e)
@@ -741,7 +827,7 @@ export default function Home() {
     loadValoresForDashboard()
   }, [])
 
-  // Agrupar contas por faixa de seguidores
+  // Agrupar contas por faixa de seguidores (excluindo contas em grupos personalizados)
   const groupedAccounts = (): { [key: string]: ProfileData[] } => {
     // Prioridade: groupsProfiles (mais atualizado) > historyProfiles > profiles
     const dataToUse = groupsProfiles.length > 0 
@@ -749,7 +835,21 @@ export default function Home() {
       : (historyProfiles.length > 0 ? historyProfiles : profiles)
     const groups: { [key: string]: ProfileData[] } = {}
     
+    // Criar conjunto de emails que estão em grupos personalizados
+    const emailsInCustomGroups = new Set<string>()
+    Object.values(customGroups).forEach(groupData => {
+      const groupEmails = groupData?.emails || []
+      groupEmails.forEach(email => emailsInCustomGroups.add(email.toLowerCase()))
+    })
+    
     dataToUse.forEach(profile => {
+      const profileEmail = (profile.email || '').toLowerCase()
+      
+      // Se a conta está em um grupo personalizado, não adicionar ao grupo original
+      if (emailsInCustomGroups.has(profileEmail)) {
+        return
+      }
+      
       const followersNum = parseFollowers(profile.followers || '0')
       const groupName = getGroupName(followersNum)
       
@@ -762,18 +862,53 @@ export default function Home() {
     return groups
   }
 
+  // Obter grupos personalizados com perfis
+  const getCustomGroupsWithProfiles = (): { [key: string]: ProfileData[] } => {
+    const dataToUse = groupsProfiles.length > 0 
+      ? groupsProfiles 
+      : (historyProfiles.length > 0 ? historyProfiles : profiles)
+    
+    const customGroupsWithProfiles: { [key: string]: ProfileData[] } = {}
+    
+    Object.keys(customGroups).forEach(groupName => {
+      const groupData = customGroups[groupName]
+      const groupEmails = groupData?.emails || []
+      customGroupsWithProfiles[groupName] = []
+      
+      groupEmails.forEach(email => {
+        const profile = dataToUse.find(p => 
+          (p.email || '').toLowerCase() === email.toLowerCase()
+        )
+        if (profile) {
+          customGroupsWithProfiles[groupName].push(profile)
+        }
+      })
+    })
+    
+    return customGroupsWithProfiles
+  }
+
   // Calcular total de dinheiro baseado nos grupos e valores cadastrados
-  const calculateTotalMoney = (): number => {
+  const calculateTotalMoney = (): { original: number, taxa: number, final: number } => {
     const groups = groupedAccounts()
-    let total = 0
+    let totalOriginal = 0
+    let totalFinal = 0
     
     Object.keys(groups).forEach(groupName => {
       const accountCount = groups[groupName].length
       const valuePerAccount = valores[groupName] || 0
-      total += accountCount * valuePerAccount
+      const valorComTaxa = valuePerAccount * (1 + taxa / 100) // Valor base + taxa
+      totalOriginal += accountCount * valuePerAccount
+      totalFinal += accountCount * valorComTaxa
     })
     
-    return total
+    const taxaAplicada = totalFinal - totalOriginal
+    
+    return {
+      original: totalOriginal,
+      taxa: taxaAplicada,
+      final: totalFinal
+    }
   }
 
 
@@ -813,6 +948,7 @@ export default function Home() {
     }
     const updatedUrls = [...urls, newUrl.trim()]
     setUrls(updatedUrls)
+    setUrlsOriginal(updatedUrls) // Atualizar URLs originais também
     setNewUrl('')
     saveUrls(updatedUrls)
     setError(null)
@@ -854,12 +990,244 @@ export default function Home() {
     // Remover da lista de URLs
     const updatedUrls = urls.filter((_, i) => i !== index)
     setUrls(updatedUrls)
+    setUrlsOriginal(updatedUrls) // Atualizar URLs originais também
     saveUrls(updatedUrls)
     
     // Remover perfis relacionados dessa URL
     setProfiles(profiles.filter(p => p.url !== urlToRemove))
     
     console.log(`URL removida: ${urlToRemove}`)
+  }
+
+  // Função para converter arquivo para base64
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    
+    // Verificar se é uma imagem
+    if (!file.type.startsWith('image/')) {
+      alert('Por favor, selecione uma imagem!')
+      return
+    }
+    
+    // Verificar tamanho (máximo 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('A imagem deve ter no máximo 5MB!')
+      return
+    }
+    
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      const base64 = event.target?.result as string
+      setGroupCoverImage(base64)
+    }
+    reader.readAsDataURL(file)
+  }
+
+  // Função para verificar e atualizar grupos personalizados baseado em seguidores
+  const verifyAndUpdateCustomGroups = (profilesData: ProfileData[]) => {
+    const newCustomGroups = { ...customGroups }
+    let hasChanges = false
+    
+    // Armazenar emails que estavam em grupos personalizados antes
+    const emailsInCustomGroupsBefore = new Set<string>()
+    Object.values(customGroups).forEach(groupData => {
+      const groupEmails = groupData?.emails || []
+      groupEmails.forEach(email => emailsInCustomGroupsBefore.add(email.toLowerCase()))
+    })
+    
+    Object.keys(newCustomGroups).forEach(groupName => {
+      const groupData = newCustomGroups[groupName]
+      if (!groupData?.emails) return
+      
+      const updatedEmails = groupData.emails.filter(email => {
+        const profile = profilesData.find(p => 
+          (p.email || '').toLowerCase() === email.toLowerCase()
+        )
+        
+        if (!profile) {
+          // Conta não encontrada, manter no grupo personalizado
+          return true
+        }
+        
+        // Verificar se a conta mudou de faixa de seguidores
+        const followersNum = parseFollowers(profile.followers || '0')
+        const currentGroupName = getGroupName(followersNum)
+        
+        // Se a conta estava em um grupo personalizado e mudou de faixa (ex: 1k para 2k),
+        // removê-la do grupo personalizado para que apareça no grupo correto
+        // A conta aparecerá automaticamente no grupo correto baseado em seguidores
+        return true // Por enquanto mantém todas, mas podemos implementar lógica mais complexa depois
+      })
+      
+      if (updatedEmails.length !== groupData.emails.length) {
+        newCustomGroups[groupName] = {
+          ...groupData,
+          emails: updatedEmails
+        }
+        hasChanges = true
+      }
+    })
+    
+    if (hasChanges) {
+      setCustomGroups(newCustomGroups)
+      
+      // Salvar no servidor
+      fetch('/api/custom-groups', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          customGroups: newCustomGroups,
+          accountGroups: accountGroups,
+          groupCovers: groupCovers
+        }),
+      }).catch(e => {
+        console.error('Erro ao salvar grupos atualizados:', e)
+      })
+    }
+  }
+
+  // Função para salvar capa do grupo
+  const handleSaveGroupCover = async () => {
+    if (!editingGroupCover) return
+    
+    const newGroupCovers = { ...groupCovers }
+    
+    // Se houver imagem, salvar a capa
+    if (groupCoverImage) {
+      newGroupCovers[editingGroupCover] = groupCoverImage
+      setGroupCovers(newGroupCovers)
+    }
+    
+    // Se for grupo personalizado, atualizar também
+    let updatedCustomGroups = customGroups
+    if (editingGroupCover.startsWith('custom-')) {
+      const oldGroupName = editingGroupCover.replace('custom-', '')
+      const newGroupName = editingGroupName.trim()
+      
+      // Se o nome foi alterado
+      if (newGroupName && newGroupName !== oldGroupName) {
+        // Verificar se o novo nome já existe
+        if (updatedCustomGroups[newGroupName]) {
+          alert('Já existe um grupo com esse nome!')
+          return
+        }
+        
+        // Mover o grupo para o novo nome
+        updatedCustomGroups = { ...customGroups }
+        if (updatedCustomGroups[oldGroupName]) {
+          updatedCustomGroups[newGroupName] = {
+            ...updatedCustomGroups[oldGroupName],
+            coverImage: groupCoverImage || updatedCustomGroups[oldGroupName].coverImage || ''
+          }
+          delete updatedCustomGroups[oldGroupName]
+          
+          // Atualizar groupCovers também
+          if (groupCovers[`custom-${oldGroupName}`]) {
+            newGroupCovers[`custom-${newGroupName}`] = groupCovers[`custom-${oldGroupName}`]
+            delete newGroupCovers[`custom-${oldGroupName}`]
+          }
+          
+          // Se havia capa sendo salva, atualizar com o novo nome
+          if (groupCoverImage) {
+            newGroupCovers[`custom-${newGroupName}`] = groupCoverImage
+          }
+          
+          // Se o grupo estava selecionado, atualizar o selectedGroup
+          if (selectedGroup === `custom-${oldGroupName}`) {
+            setSelectedGroup(`custom-${newGroupName}`)
+          }
+        }
+      } else {
+        // Nome não mudou, apenas atualizar a capa se houver
+        updatedCustomGroups = { ...customGroups }
+        if (updatedCustomGroups[oldGroupName]) {
+          if (groupCoverImage) {
+            updatedCustomGroups[oldGroupName].coverImage = groupCoverImage
+          }
+        } else {
+          updatedCustomGroups[oldGroupName] = {
+            emails: [],
+            coverImage: groupCoverImage || ''
+          }
+        }
+      }
+      setCustomGroups(updatedCustomGroups)
+    }
+    
+    setEditingGroupCover(null)
+    setGroupCoverImage('')
+    setEditingGroupName('')
+    
+    // Salvar no servidor
+    try {
+      await fetch('/api/custom-groups', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          customGroups: updatedCustomGroups,
+          accountGroups: accountGroups,
+          groupCovers: newGroupCovers
+        }),
+      })
+    } catch (e) {
+      console.error('Erro ao salvar capa do grupo:', e)
+      alert('Erro ao salvar. Tente novamente.')
+    }
+  }
+
+  // Função para criar grupo personalizado
+  const handleCreateGroup = async () => {
+    if (!newGroupName.trim()) return
+    
+    const groupName = newGroupName.trim()
+    
+    // Verificar se o grupo já existe
+    if (customGroups[groupName]) {
+      alert('Este grupo já existe!')
+      return
+    }
+    
+    // Criar novo grupo
+    const newCustomGroups = {
+      ...customGroups,
+      [groupName]: { emails: [], coverImage: '' }
+    }
+    
+    // Se há uma conta pendente para mover, adicionar ao novo grupo
+    if (pendingMoveEmail) {
+      newCustomGroups[groupName].emails = [pendingMoveEmail]
+      
+      // Remover de outros grupos personalizados
+      Object.keys(newCustomGroups).forEach(existingGroupName => {
+        if (existingGroupName !== groupName) {
+          newCustomGroups[existingGroupName].emails = newCustomGroups[existingGroupName].emails.filter(
+            email => email.toLowerCase() !== pendingMoveEmail
+          )
+        }
+      })
+    }
+    
+    setCustomGroups(newCustomGroups)
+    setShowCreateGroupModal(false)
+    setNewGroupName('')
+    setPendingMoveEmail(null)
+    
+    // Salvar no servidor
+    try {
+      await fetch('/api/custom-groups', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          customGroups: newCustomGroups,
+          accountGroups: accountGroups,
+          groupCovers: groupCovers
+        }),
+      })
+    } catch (e) {
+      console.error('Erro ao salvar grupos:', e)
+      alert('Erro ao criar grupo. Tente novamente.')
+    }
   }
 
   const handleExecute = async () => {
@@ -1030,6 +1398,8 @@ export default function Home() {
           // Atualizar dados dos grupos imediatamente após salvar
           if (results.length > 0) {
             setGroupsProfiles(results)
+            // Verificar e atualizar grupos personalizados baseado em seguidores atuais
+            verifyAndUpdateCustomGroups(results)
           }
         } else {
           const errorData = await response.json().catch(() => ({ error: 'Erro desconhecido' }))
@@ -1337,15 +1707,34 @@ export default function Home() {
 
                   {/* Total de Dinheiro */}
                   <div className="mb-6 p-6 bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl shadow-lg">
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between mb-4">
                       <div>
-                        <p className="text-white/90 text-sm font-medium mb-1">💰 Total em Contas</p>
-                        <p className="text-white text-3xl font-bold">
-                          R$ {calculateTotalMoney().toFixed(2).replace('.', ',')}
+                        <p className="text-white/90 text-sm font-medium mb-1">💰 Valor Total que Você Ganha</p>
+                        <p className="text-white text-4xl font-bold">
+                          R$ {calculateTotalMoney().final.toFixed(2).replace('.', ',')}
                         </p>
                       </div>
                       <div className="text-5xl">💰</div>
                     </div>
+                    {Object.keys(valores).length > 0 && (() => {
+                      const total = calculateTotalMoney()
+                      return (
+                        <div className="space-y-2 pt-4 border-t border-white/20">
+                          <div className="flex justify-between text-white/90 text-sm">
+                            <span>Valor Base (sem taxa):</span>
+                            <span className="font-semibold">R$ {total.original.toFixed(2).replace('.', ',')}</span>
+                          </div>
+                          <div className="flex justify-between text-white/90 text-sm">
+                            <span>Taxa ({taxa.toFixed(2).replace('.', ',')}%):</span>
+                            <span className="font-semibold text-yellow-200">+ R$ {total.taxa.toFixed(2).replace('.', ',')}</span>
+                          </div>
+                          <div className="flex justify-between text-white text-lg font-bold pt-2 border-t border-white/30">
+                            <span>💰 Valor Total que Você Ganha:</span>
+                            <span className="text-2xl">R$ {total.final.toFixed(2).replace('.', ',')}</span>
+                          </div>
+                        </div>
+                      )
+                    })()}
                     {Object.keys(valores).length === 0 && (
                       <p className="text-white/80 text-xs mt-2">
                         Configure os valores na aba "Valores" para ver o total calculado
@@ -1650,12 +2039,7 @@ export default function Home() {
                             onChange={(e) => setNewAccount({ ...newAccount, url: e.target.value })}
                             className="input-new font-mono text-sm"
                             placeholder="https://k.kwai.com/u/@username/..."
-                            disabled={editingAccountIndex !== null}
-                            title={editingAccountIndex !== null ? 'O link do Kwai não pode ser editado' : ''}
                           />
-                          {editingAccountIndex !== null && (
-                            <p className="text-xs text-gray-500 mt-1">O link do Kwai não pode ser alterado</p>
-                          )}
                         </div>
                         <div>
                           <label className="block text-sm font-semibold text-slate-700 mb-2">Número (opcional)</label>
@@ -1686,39 +2070,95 @@ export default function Home() {
                       <div className="flex gap-3 mt-6">
                         <button
                           onClick={async () => {
-                            // Validação: URL obrigatório apenas para novas contas
+                            // Validação rigorosa dos campos obrigatórios
+                            const emailValido = newAccount.email && newAccount.email.trim() !== ''
+                            const senhaValida = newAccount.password && newAccount.password.trim() !== ''
+                            const urlValida = newAccount.url && newAccount.url.trim() !== ''
+                            
                             if (editingAccountIndex === null) {
-                              // Nova conta - todos os campos obrigatórios
-                              if (!newAccount.email || !newAccount.password || !newAccount.url) {
-                                setError('Preencha todos os campos obrigatórios')
-                                return
+                              // Nova conta - todos os campos obrigatórios (Email, Senha e Link Kwai)
+                              if (!emailValido || !senhaValida || !urlValida) {
+                                const camposFaltando = []
+                                if (!emailValido) camposFaltando.push('Email')
+                                if (!senhaValida) camposFaltando.push('Senha')
+                                if (!urlValida) camposFaltando.push('Link do Kwai')
+                                setError(`❌ Campos obrigatórios não preenchidos: ${camposFaltando.join(', ')}`)
+                                return // NÃO SALVA se faltar algum campo
                               }
                             } else {
-                              // Editando conta - URL não é obrigatório, mas email e senha sim
-                              if (!newAccount.email || !newAccount.password) {
-                                setError('Preencha todos os campos obrigatórios')
-                                return
+                              // Editando conta - Email e Senha são obrigatórios
+                              if (!emailValido || !senhaValida) {
+                                const camposFaltando = []
+                                if (!emailValido) camposFaltando.push('Email')
+                                if (!senhaValida) camposFaltando.push('Senha')
+                                setError(`❌ Campos obrigatórios não preenchidos: ${camposFaltando.join(', ')}`)
+                                return // NÃO SALVA se faltar algum campo
                               }
                             }
+                            
+                            // Limpar erro se passou na validação
+                            setError(null)
+                            
+                            // Verificar email duplicado (apenas para novas contas)
+                            if (editingAccountIndex === null) {
+                              const emailToCheck = newAccount.email.trim().toLowerCase()
+                              const existingAccount = accounts.find(acc => 
+                                acc.email.toLowerCase() === emailToCheck
+                              )
+                              
+                              if (existingAccount) {
+                                // Encontrar perfil correspondente para mostrar foto
+                                const profile = profiles.find(p => 
+                                  p.email?.toLowerCase() === emailToCheck
+                                ) || historyProfiles.find(p => 
+                                  p.email?.toLowerCase() === emailToCheck
+                                ) || groupsProfiles.find(p => 
+                                  p.email?.toLowerCase() === emailToCheck
+                                )
+                                
+                                setDuplicateAccount(existingAccount)
+                                setDuplicateAccountProfile(profile || null)
+                                setError('Este email já está cadastrado!')
+                                return // Não salva
+                              }
+                            } else {
+                              // Ao editar, verificar se o email mudou e se já existe em outra conta
+                              const emailToCheck = newAccount.email.trim().toLowerCase()
+                              const currentAccount = accounts[editingAccountIndex]
+                              
+                              // Se o email mudou, verificar se já existe
+                              if (currentAccount.email.toLowerCase() !== emailToCheck) {
+                                const existingAccount = accounts.find((acc, idx) => 
+                                  idx !== editingAccountIndex && acc.email.toLowerCase() === emailToCheck
+                                )
+                                
+                                if (existingAccount) {
+                                  // Encontrar perfil correspondente
+                                  const profile = profiles.find(p => 
+                                    p.email?.toLowerCase() === emailToCheck
+                                  ) || historyProfiles.find(p => 
+                                    p.email?.toLowerCase() === emailToCheck
+                                  ) || groupsProfiles.find(p => 
+                                    p.email?.toLowerCase() === emailToCheck
+                                  )
+                                  
+                                  setDuplicateAccount(existingAccount)
+                                  setDuplicateAccountProfile(profile || null)
+                                  setError('Este email já está cadastrado em outra conta!')
+                                  return // Não salva
+                                }
+                              }
+                            }
+                            
+                            // Limpar dados de duplicata se passou na validação
+                            setDuplicateAccount(null)
+                            setDuplicateAccountProfile(null)
                             
                             // Gerar ID automaticamente por incremento numérico
                             let finalId = ''
                             if (editingAccountIndex === null) {
-                              // Nova conta - gerar ID por incremento
-                              const existingIds = accounts
-                                .map(acc => acc.id)
-                                .filter((id): id is string => {
-                                  if (!id) return false
-                                  return /^\d+$/.test(id)
-                                }) // Apenas IDs numéricos
-                                .map(id => parseInt(id, 10))
-                              
-                              if (existingIds.length > 0) {
-                                const maxId = Math.max(...existingIds)
-                                finalId = String(maxId + 1)
-                              } else {
-                                finalId = '1'
-                              }
+                              // Nova conta - usar o próximo ID sequencial baseado na quantidade de contas
+                              finalId = String(accounts.length + 1)
                             } else {
                               // Editando conta - manter o ID existente
                               finalId = accounts[editingAccountIndex].id || ''
@@ -1730,10 +2170,8 @@ export default function Home() {
                             // Criar objeto da conta - nome inicia como "n/a" para novas contas
                             const existingAccount = editingAccountIndex !== null ? accounts[editingAccountIndex] : null
                             
-                            // Ao editar, manter a URL original (não permitir alteração)
-                            const urlToSave = editingAccountIndex !== null 
-                              ? (existingAccount?.url || '') 
-                              : newAccount.url
+                            // Processar URL - usar o valor digitado (já validado acima)
+                            const urlToSave = newAccount.url.trim()
                             
                             // Processar name - usar o valor digitado, ou manter existente se vazio ao editar
                             const nameValue = editingAccountIndex === null 
@@ -1743,13 +2181,16 @@ export default function Home() {
                             const accountToSave: AccountData = {
                               ...newAccount,
                               id: finalId,
-                              url: urlToSave, // Usar URL original ao editar
+                              email: newAccount.email.trim(),
+                              password: newAccount.password.trim(),
+                              url: urlToSave,
                               cel: celValue,
-                              name: nameValue
+                              name: nameValue,
+                              number: newAccount.number ? newAccount.number.trim() : ''
                             }
                             
                             if (editingAccountIndex !== null) {
-                              // Editar conta existente - não alterar URL
+                              // Editar conta existente
                               const updatedAccounts = [...accounts]
                               
                               updatedAccounts[editingAccountIndex] = accountToSave
@@ -1771,6 +2212,7 @@ export default function Home() {
                               if (!urls.includes(newAccount.url)) {
                                 const updatedUrls = [...urls, newAccount.url]
                                 setUrls(updatedUrls)
+                                setUrlsOriginal(updatedUrls) // Atualizar URLs originais também
                                 await saveUrls(updatedUrls)
                               }
                               
@@ -1794,6 +2236,8 @@ export default function Home() {
                             setNewAccount({ id: '', email: '', password: '', url: '', number: '', cel: '', name: '' })
                             setShowAddAccount(false)
                             setError(null)
+                            setDuplicateAccount(null)
+                            setDuplicateAccountProfile(null)
                           }}
                           className="btn-new btn-success-new flex-1"
                         >
@@ -1805,6 +2249,8 @@ export default function Home() {
                             setEditingAccountIndex(null)
                             setNewAccount({ id: '', email: '', password: '', url: '', number: '', cel: '', name: '' })
                             setError(null)
+                            setDuplicateAccount(null)
+                            setDuplicateAccountProfile(null)
                           }}
                           className="btn-new btn-secondary-new flex-1"
                         >
@@ -1814,6 +2260,78 @@ export default function Home() {
                     </div>
                   </div>
                 )}
+                
+                {/* Modal de Erro - Email Duplicado */}
+                {duplicateAccount && (
+                  <div className="modal-overlay">
+                    <div className="modal-content max-w-md">
+                      <div className="mb-6">
+                        <div className="flex items-center gap-3 mb-4">
+                          <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                            <span className="text-2xl">⚠️</span>
+                          </div>
+                          <div>
+                            <h3 className="text-xl font-bold text-gray-800">Email Já Cadastrado</h3>
+                            <p className="text-sm text-gray-600">Este email já está em uso</p>
+                          </div>
+                        </div>
+                        
+                        <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                          <div className="flex items-center gap-4">
+                            {/* Foto do Perfil */}
+                            <div className="flex-shrink-0">
+                              {duplicateAccountProfile?.avatar ? (
+                                <img
+                                  src={duplicateAccountProfile.avatar}
+                                  alt={duplicateAccount.name || duplicateAccount.email}
+                                  className="w-16 h-16 rounded-full border-2 border-purple-400 object-cover"
+                                  onError={(e) => {
+                                    e.currentTarget.style.display = 'none'
+                                  }}
+                                />
+                              ) : (
+                                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 border-2 border-purple-400 flex items-center justify-center">
+                                  <span className="text-2xl text-white font-bold">
+                                    {(duplicateAccount.name || duplicateAccount.email || '?')[0]?.toUpperCase()}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                            
+                            {/* Dados da Conta */}
+                            <div className="flex-1 min-w-0">
+                              <div className="font-bold text-gray-800 text-lg mb-1 truncate">
+                                {duplicateAccount.name || 'N/A'}
+                              </div>
+                              <div className="text-sm text-gray-600 truncate mb-2">
+                                {duplicateAccount.email}
+                              </div>
+                              {duplicateAccount.id && (
+                                <div className="text-xs text-gray-500 font-mono">
+                                  ID: {duplicateAccount.id}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="flex gap-3">
+                        <button
+                          onClick={() => {
+                            setDuplicateAccount(null)
+                            setDuplicateAccountProfile(null)
+                            setError(null)
+                          }}
+                          className="btn-new btn-primary-new flex-1"
+                        >
+                          Entendi
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead>
@@ -1851,7 +2369,14 @@ export default function Home() {
                           const handleRemoveAccount = async () => {
                             if (confirm(`Tem certeza que deseja remover esta conta?\n${account.email}`)) {
                               const updatedAccounts = accounts.filter((_, i) => i !== index)
-                              setAccounts(updatedAccounts)
+                              
+                              // Reajustar IDs sequencialmente (1, 2, 3, ...)
+                              const reindexedAccounts = updatedAccounts.map((acc, idx) => ({
+                                ...acc,
+                                id: String(idx + 1)
+                              }))
+                              
+                              setAccounts(reindexedAccounts)
                               
                               // Remover URL correspondente - buscar pela URL salva ou gerar pelo email
                               let urlToRemove = account.url
@@ -1878,15 +2403,16 @@ export default function Home() {
                               // Se removeu alguma URL, atualizar a lista
                               if (updatedUrls.length < urls.length) {
                                 setUrls(updatedUrls)
+                                setUrlsOriginal(updatedUrls) // Atualizar URLs originais também
                                 await saveUrls(updatedUrls)
                               }
                               
-                              // Salvar contas
+                              // Salvar contas com IDs reajustados
                               try {
                                 await fetch('/api/accounts', {
                                   method: 'POST',
                                   headers: { 'Content-Type': 'application/json' },
-                                  body: JSON.stringify({ accounts: updatedAccounts }),
+                                  body: JSON.stringify({ accounts: reindexedAccounts }),
                                 })
                               } catch (e) {
                                 console.error('Erro ao salvar contas:', e)
@@ -1975,7 +2501,19 @@ export default function Home() {
             {activeTab === 'urls' && (
               <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-2xl font-bold text-gray-800">🔗 URLs ({urls.length})</h2>
+                  <h2 className="text-2xl font-bold text-gray-800">🔗 URLs ({urls.filter((_, idx) => !urlsProcessed.has(idx)).length}/{urls.length})</h2>
+                  <button
+                    onClick={() => {
+                      setUrlsProcessed(new Set())
+                      // Restaurar URLs originais se existirem, senão usar as URLs atuais
+                      if (urlsOriginal.length > 0) {
+                        setUrls(urlsOriginal)
+                      }
+                    }}
+                    className="px-4 py-2 bg-blue-500 text-white font-semibold rounded-lg hover:bg-blue-600 transition-all"
+                  >
+                    🔄 Reiniciar
+                  </button>
                 </div>
 
                 {/* Formulário para adicionar nova URL */}
@@ -2006,19 +2544,47 @@ export default function Home() {
                 </div>
 
                 {/* Lista de URLs */}
-                <div className="max-h-96 overflow-y-auto space-y-2">
+                <div className="max-h-[calc(100vh-300px)] overflow-y-auto space-y-2">
                   {urls.map((url, index) => {
+                    // Pular URLs processadas
+                    if (urlsProcessed.has(index)) {
+                      return null
+                    }
+                    
                     // Buscar perfil correspondente para obter a foto
                     const profile = profiles.find(p => p.url === url)
                     const avatar = profile?.avatar || ''
                     const displayName = cleanDisplayName(profile?.displayName || profile?.name || '')
                     
+                    // Calcular número real (sem contar as processadas)
+                    const realIndex = urls.slice(0, index).filter((_, idx) => !urlsProcessed.has(idx)).length + 1
+                    
                     return (
                       <div
                         key={index}
-                        className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors group"
+                    onClick={async () => {
+                      // Copiar URL para clipboard
+                      try {
+                        await navigator.clipboard.writeText(url)
+                        // Marcar como processada
+                        setUrlsProcessed(prev => {
+                          const newSet = new Set(prev)
+                          newSet.add(index)
+                          return newSet
+                        })
+                      } catch (e) {
+                        console.error('Erro ao copiar URL:', e)
+                        // Mesmo com erro, marcar como processada
+                        setUrlsProcessed(prev => {
+                          const newSet = new Set(prev)
+                          newSet.add(index)
+                          return newSet
+                        })
+                      }
+                    }}
+                        className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-purple-50 hover:border-purple-300 border border-transparent transition-all cursor-pointer group"
                       >
-                        <span className="text-sm text-gray-500 w-8">{index + 1}.</span>
+                        <span className="text-sm text-gray-500 w-8">{realIndex}.</span>
                         
                         {/* Foto do perfil */}
                         <div className="flex-shrink-0">
@@ -2049,7 +2615,8 @@ export default function Home() {
 
                         {/* Botão de deletar */}
                         <button
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.stopPropagation() // Evitar que o clique no botão dispare o onClick do div
                             if (window.confirm(`Tem certeza que deseja deletar esta URL?\n\n${url}`)) {
                               handleRemoveUrl(index)
                             }
@@ -2062,9 +2629,9 @@ export default function Home() {
                       </div>
                     )
                   })}
-                  {urls.length === 0 && (
+                  {urls.filter((_, idx) => !urlsProcessed.has(idx)).length === 0 && (
                     <div className="text-center py-8 text-gray-500">
-                      Nenhuma URL cadastrada.
+                      {urls.length === 0 ? 'Nenhuma URL cadastrada.' : 'Todas as URLs foram processadas. Clique em "Reiniciar" para voltar.'}
                     </div>
                   )}
                 </div>
@@ -2128,11 +2695,96 @@ export default function Home() {
                 {!selectedGroup ? (
                   // Lista de Grupos
                   <div>
-                    <div className="text-center mb-8">
-                      <h3 className="text-xl font-bold text-gray-800 mb-2">Selecione um Grupo</h3>
-                      <p className="text-gray-600">Escolha uma faixa de seguidores para visualizar as contas</p>
+                    <div className="flex items-center justify-between mb-8">
+                      <div className="text-center flex-1">
+                        <h3 className="text-xl font-bold text-gray-800 mb-2">Selecione um Grupo</h3>
+                        <p className="text-gray-600">Escolha uma faixa de seguidores ou grupo personalizado para visualizar as contas</p>
+                      </div>
+                      <button
+                        onClick={() => setShowCreateGroupModal(true)}
+                        className="px-5 py-2.5 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all shadow-md flex items-center gap-2"
+                      >
+                        <span>➕</span>
+                        <span>Criar Grupo</span>
+                      </button>
                     </div>
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                      {/* Grupos Personalizados */}
+                      {Object.entries(getCustomGroupsWithProfiles())
+                        .map(([groupName, accounts]) => {
+                          const totalFollowers = accounts.reduce((sum, acc) => {
+                            return sum + parseFollowers(acc.followers || '0')
+                          }, 0)
+                          const groupData = customGroups[groupName]
+                          const coverImage = groupCovers[`custom-${groupName}`] || groupData?.coverImage || ''
+                          
+                          return (
+                            <div
+                              key={`custom-${groupName}`}
+                              className="group relative bg-white rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 shadow-lg hover:shadow-2xl border border-gray-200 hover:border-purple-400"
+                              onClick={() => setSelectedGroup(`custom-${groupName}`)}
+                            >
+                              {/* Capa do Grupo */}
+                              <div className="relative h-32 bg-gradient-to-br from-purple-500 via-pink-500 to-purple-600 overflow-hidden">
+                                {coverImage ? (
+                                  <img 
+                                    src={coverImage} 
+                                    alt={groupName}
+                                    className="w-full h-full object-cover"
+                                    onError={(e) => {
+                                      e.currentTarget.style.display = 'none'
+                                    }}
+                                  />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center">
+                                    <span className="text-4xl text-white opacity-80">👥</span>
+                                  </div>
+                                )}
+                                {/* Overlay com gradiente */}
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent"></div>
+                                {/* Botão de editar capa */}
+                                 <button
+                                   onClick={(e) => {
+                                     e.stopPropagation()
+                                     setEditingGroupCover(`custom-${groupName}`)
+                                     setGroupCoverImage(groupCovers[`custom-${groupName}`] || groupData?.coverImage || '')
+                                     setEditingGroupName(groupName)
+                                   }}
+                                   className="absolute top-2 right-2 p-2 bg-black/50 hover:bg-black/70 rounded-lg backdrop-blur-sm transition-all opacity-0 group-hover:opacity-100"
+                                 >
+                                   <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                   </svg>
+                                 </button>
+                              </div>
+                              
+                              {/* Conteúdo do Card */}
+                              <div className="p-5">
+                                <div className="text-center">
+                                  <h3 className="text-xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-2">
+                                    {groupName}
+                                  </h3>
+                                  <div className="flex items-center justify-center gap-4 mt-3">
+                                    <div>
+                                      <div className="text-2xl font-bold text-gray-800">
+                                        {accounts.length}
+                                      </div>
+                                      <div className="text-xs text-gray-500 uppercase tracking-wide font-semibold">contas</div>
+                                    </div>
+                                    <div className="w-px h-8 bg-gray-300"></div>
+                                    <div>
+                                      <div className="text-2xl font-bold text-gray-800">
+                                        {(totalFollowers / 1000).toFixed(1)}K
+                                      </div>
+                                      <div className="text-xs text-gray-500 uppercase tracking-wide font-semibold">seguidores</div>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      {/* Grupos Originais (por seguidores) */}
                       {Object.entries(groupedAccounts())
                         .sort((a, b) => {
                           // Ordenar: inicio primeiro, depois por número
@@ -2146,30 +2798,78 @@ export default function Home() {
                           const totalFollowers = accounts.reduce((sum, acc) => {
                             return sum + parseFollowers(acc.followers || '0')
                           }, 0)
+                          const coverImage = groupCovers[groupName] || ''
                           
                           return (
                             <div
                               key={groupName}
+                              className="group relative bg-white rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 shadow-lg hover:shadow-2xl border border-gray-200 hover:border-purple-400"
                               onClick={() => setSelectedGroup(groupName)}
-                              className="bg-white rounded-2xl p-6 cursor-pointer transition-colors duration-200 border border-gray-200 hover:border-purple-300"
                             >
-                              <div className="text-center">
-                                <div className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-3">
-                                  {groupName === 'inicio' ? '< 1k' : groupName.toUpperCase()}
+                              {/* Capa do Grupo */}
+                              <div className="relative h-32 bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-600 overflow-hidden">
+                                {coverImage ? (
+                                  <img 
+                                    src={coverImage} 
+                                    alt={groupName}
+                                    className="w-full h-full object-cover"
+                                    onError={(e) => {
+                                      e.currentTarget.style.display = 'none'
+                                    }}
+                                  />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center">
+                                    <span className="text-5xl text-white opacity-90">
+                                      {groupName === 'inicio' ? '🚀' : '⭐'}
+                                    </span>
+                                  </div>
+                                )}
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent"></div>
+                                <div className="absolute bottom-3 left-3 right-3">
+                                  <div className="text-2xl font-black text-white drop-shadow-lg">
+                                    {groupName === 'inicio' ? '< 1k' : groupName.toUpperCase()}
+                                  </div>
                                 </div>
-                                <div className="text-3xl font-bold text-gray-800 mb-1">
-                                  {accounts.length}
-                                </div>
-                                <div className="text-xs text-gray-500 uppercase tracking-wide font-semibold mb-2">contas</div>
-                                <div className="text-xs text-gray-500">
-                                  {totalFollowers.toLocaleString()} seguidores
+                                {/* Botão de editar capa */}
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    setEditingGroupCover(groupName)
+                                    setGroupCoverImage(coverImage)
+                                  }}
+                                  className="absolute top-2 right-2 p-2 bg-black/50 hover:bg-black/70 rounded-lg backdrop-blur-sm transition-all opacity-0 group-hover:opacity-100"
+                                >
+                                  <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                  </svg>
+                                </button>
+                              </div>
+                              
+                              {/* Conteúdo do Card */}
+                              <div className="p-5">
+                                <div className="text-center">
+                                  <div className="flex items-center justify-center gap-4 mt-2">
+                                    <div>
+                                      <div className="text-2xl font-bold text-gray-800">
+                                        {accounts.length}
+                                      </div>
+                                      <div className="text-xs text-gray-500 uppercase tracking-wide font-semibold">contas</div>
+                                    </div>
+                                    <div className="w-px h-8 bg-gray-300"></div>
+                                    <div>
+                                      <div className="text-2xl font-bold text-gray-800">
+                                        {(totalFollowers / 1000).toFixed(1)}K
+                                      </div>
+                                      <div className="text-xs text-gray-500 uppercase tracking-wide font-semibold">seguidores</div>
+                                    </div>
+                                  </div>
                                 </div>
                               </div>
                             </div>
                           )
                         })}
                     </div>
-                    {Object.keys(groupedAccounts()).length === 0 && (
+                    {Object.keys(groupedAccounts()).length === 0 && Object.keys(getCustomGroupsWithProfiles()).length === 0 && (
                       <div className="text-center py-12">
                         <p className="text-lg font-medium text-gray-700 mb-2">Nenhum grupo disponível</p>
                         <p className="text-sm text-gray-500">Execute a análise primeiro ou selecione um histórico.</p>
@@ -2180,18 +2880,64 @@ export default function Home() {
                   // Lista de Contas do Grupo Selecionado
                   <div>
                     <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
-                      <div className="bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl px-8 py-4 text-white shadow-lg">
+                      <div className={`rounded-xl px-8 py-4 text-white shadow-lg ${
+                        selectedGroup.startsWith('custom-') 
+                          ? 'bg-gradient-to-r from-purple-600 to-pink-600' 
+                          : 'bg-gradient-to-r from-purple-600 to-pink-600'
+                      }`}>
                         <div className="text-xs font-medium opacity-90 mb-1 uppercase tracking-wide">Grupo Selecionado</div>
                         <div className="text-3xl font-black">
-                          {selectedGroup === 'inicio' ? '< 1k' : selectedGroup.toUpperCase()}
+                          {selectedGroup.startsWith('custom-') 
+                            ? selectedGroup.replace('custom-', '') 
+                            : (selectedGroup === 'inicio' ? '< 1k' : selectedGroup.toUpperCase())}
                         </div>
                         <div className="text-xs opacity-80 mt-2 font-medium">
-                          {groupedAccounts()[selectedGroup]?.length || 0} conta(s) neste grupo
+                          {selectedGroup.startsWith('custom-') 
+                            ? (getCustomGroupsWithProfiles()[selectedGroup.replace('custom-', '')]?.length || 0)
+                            : (groupedAccounts()[selectedGroup]?.length || 0)} conta(s) neste grupo
                         </div>
                       </div>
+                      {selectedGroup.startsWith('custom-') && (
+                        <button
+                          onClick={async () => {
+                            const groupName = selectedGroup.replace('custom-', '')
+                            if (!confirm(`Tem certeza que deseja remover o grupo "${groupName}"? As contas voltarão para seus grupos originais.`)) {
+                              return
+                            }
+                            
+                            const newCustomGroups = { ...customGroups }
+                            delete newCustomGroups[groupName]
+                            
+                            setCustomGroups(newCustomGroups)
+                            setSelectedGroup(null)
+                            
+                            // Salvar no servidor
+                            try {
+                              await fetch('/api/custom-groups', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ 
+                                  customGroups: newCustomGroups,
+                                  accountGroups: accountGroups
+                                }),
+                              })
+                            } catch (e) {
+                              console.error('Erro ao salvar grupos:', e)
+                              alert('Erro ao remover grupo. Tente novamente.')
+                            }
+                          }}
+                          className="px-5 py-2.5 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-all shadow-md flex items-center gap-2"
+                        >
+                          <span>🗑️</span>
+                          <span>Remover Grupo</span>
+                        </button>
+                      )}
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                      {groupedAccounts()[selectedGroup]?.map((profile, index) => {
+                      {(selectedGroup.startsWith('custom-') 
+                        ? getCustomGroupsWithProfiles()[selectedGroup.replace('custom-', '')] || []
+                        : groupedAccounts()[selectedGroup] || []
+                      ).map((profile, index) => {
                         const getKwaiUrl = (): string | null => {
                           if (profile.url) return profile.url
                           
@@ -2214,21 +2960,10 @@ export default function Home() {
                         const kwaiUrl = getKwaiUrl()
                         const displayName = cleanDisplayName(profile.displayName || profile.name || profile.username || profile.email || 'N/A')
                         
-                        const handleCardClick = () => {
-                          if (kwaiUrl) {
-                            window.open(kwaiUrl, '_blank')
-                          }
-                        }
-                        
                         return (
                           <div
                             key={index}
-                            onClick={handleCardClick}
-                            className={`group bg-white rounded-2xl p-6 border-2 transition-all duration-200 cursor-pointer ${
-                              kwaiUrl 
-                                ? 'border-gray-200 hover:border-purple-400 hover:shadow-xl' 
-                                : 'border-gray-200 opacity-60 cursor-not-allowed'
-                            }`}
+                            className="group bg-white rounded-2xl p-6 border-2 border-gray-200 transition-all duration-200"
                           >
                             <div className="space-y-4">
                               {/* Avatar e Nome */}
@@ -2237,20 +2972,20 @@ export default function Home() {
                                   <img
                                     src={profile.avatar}
                                     alt={displayName}
-                                    className="w-20 h-20 rounded-2xl border-[3px] border-purple-400 object-cover flex-shrink-0 shadow-lg group-hover:shadow-purple-200 transition-shadow"
+                                    className="w-20 h-20 rounded-2xl border-[3px] border-purple-400 object-cover flex-shrink-0 shadow-lg"
                                     onError={(e) => {
                                       e.currentTarget.style.display = 'none'
                                     }}
                                   />
                                 ) : (
-                                  <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-purple-400 to-pink-400 border-[3px] border-purple-400 flex items-center justify-center flex-shrink-0 shadow-lg group-hover:shadow-purple-200 transition-shadow">
+                                  <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-purple-400 to-pink-400 border-[3px] border-purple-400 flex items-center justify-center flex-shrink-0 shadow-lg">
                                     <span className="text-3xl text-white font-bold">
                                       {displayName[0]?.toUpperCase() || '?'}
                                     </span>
                                   </div>
                                 )}
                                 <div className="flex-1 min-w-0">
-                                  <div className="font-bold text-gray-800 truncate text-lg mb-1 group-hover:text-purple-600 transition-colors">
+                                  <div className="font-bold text-gray-800 truncate text-lg mb-1">
                                     {displayName}
                                   </div>
                                   {profile.username && (
@@ -2299,19 +3034,130 @@ export default function Home() {
                                 </div>
                               )}
                               
-                              {/* Indicador de clique */}
+                              {/* Botão Ver Perfil */}
                               {kwaiUrl && (
                                 <div className="pt-2">
-                                  <div className="text-center text-xs font-medium text-purple-600 bg-purple-50 rounded-lg py-2 group-hover:bg-purple-100 transition-colors">
-                                    Clique para ver perfil →
-                                  </div>
+                                  <button
+                                    onClick={() => window.open(kwaiUrl, '_blank')}
+                                    className="w-full text-xs px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium"
+                                  >
+                                    👁️ Ver Perfil
+                                  </button>
                                 </div>
                               )}
-                              {!kwaiUrl && (
+                              
+                              {/* Botão para remover de grupo personalizado ou mover para outro */}
+                              {selectedGroup.startsWith('custom-') && profile.email && (
                                 <div className="pt-2">
-                                  <div className="text-center text-xs text-gray-400 bg-gray-50 rounded-lg py-2">
-                                    Perfil não disponível
-                                  </div>
+                                  <button
+                                    onClick={async () => {
+                                      if (!profile.email) return
+                                      
+                                      const profileEmail = profile.email.toLowerCase()
+                                      const groupName = selectedGroup.replace('custom-', '')
+                                      
+                                      const newCustomGroups = { ...customGroups }
+                                      if (newCustomGroups[groupName]?.emails) {
+                                        newCustomGroups[groupName].emails = newCustomGroups[groupName].emails.filter(
+                                          email => email.toLowerCase() !== profileEmail
+                                        )
+                                      }
+                                      
+                                      setCustomGroups(newCustomGroups)
+                                      
+                                      // Salvar no servidor
+                                      try {
+                                        await fetch('/api/custom-groups', {
+                                          method: 'POST',
+                                          headers: { 'Content-Type': 'application/json' },
+                                          body: JSON.stringify({ 
+                                            customGroups: newCustomGroups,
+                                            accountGroups: accountGroups,
+                                            groupCovers: groupCovers
+                                          }),
+                                        })
+                                      } catch (e) {
+                                        console.error('Erro ao salvar grupos:', e)
+                                      }
+                                    }}
+                                    className="w-full text-xs px-2 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                                  >
+                                    Remover do grupo (volta para grupo original)
+                                  </button>
+                                </div>
+                              )}
+                              {/* Botão para mover para grupo personalizado */}
+                              {!selectedGroup.startsWith('custom-') && profile.email && (
+                                <div className="pt-2">
+                                  <select
+                                    onChange={async (e) => {
+                                      const targetGroup = e.target.value
+                                      if (!targetGroup || !profile.email) {
+                                        e.target.value = ''
+                                        return
+                                      }
+                                      
+                                      // Se selecionou criar novo grupo, abrir modal
+                                      if (targetGroup === '__create__') {
+                                        setNewGroupName('')
+                                        setPendingMoveEmail(profile.email.toLowerCase())
+                                        setShowCreateGroupModal(true)
+                                        // Resetar select
+                                        e.target.value = ''
+                                        return
+                                      }
+                                      
+                                      const profileEmail = profile.email.toLowerCase()
+                                      
+                                      // Remover de todos os grupos personalizados primeiro
+                                      const newCustomGroups = { ...customGroups }
+                                      Object.keys(newCustomGroups).forEach(groupName => {
+                                        if (newCustomGroups[groupName]?.emails) {
+                                          newCustomGroups[groupName].emails = newCustomGroups[groupName].emails.filter(
+                                            email => email.toLowerCase() !== profileEmail
+                                          )
+                                        }
+                                      })
+                                      
+                                      // Adicionar ao grupo selecionado
+                                      if (targetGroup !== '') {
+                                        if (!newCustomGroups[targetGroup]) {
+                                          newCustomGroups[targetGroup] = { emails: [], coverImage: '' }
+                                        }
+                                        if (!newCustomGroups[targetGroup].emails.includes(profileEmail)) {
+                                          newCustomGroups[targetGroup].emails.push(profileEmail)
+                                        }
+                                      }
+                                      
+                                      setCustomGroups(newCustomGroups)
+                                      
+                                      // Salvar no servidor
+                                      try {
+                                        await fetch('/api/custom-groups', {
+                                          method: 'POST',
+                                          headers: { 'Content-Type': 'application/json' },
+                                          body: JSON.stringify({ 
+                                            customGroups: newCustomGroups,
+                                            accountGroups: accountGroups,
+                                            groupCovers: groupCovers
+                                          }),
+                                        })
+                                      } catch (e) {
+                                        console.error('Erro ao salvar grupos:', e)
+                                      }
+                                      
+                                      // Resetar select
+                                      e.target.value = ''
+                                    }}
+                                    className="w-full text-xs px-2 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                    defaultValue=""
+                                  >
+                                    <option value="">Mover para grupo...</option>
+                                    {Object.keys(customGroups).map(groupName => (
+                                      <option key={groupName} value={groupName}>{groupName}</option>
+                                    ))}
+                                    <option value="__create__">➕ Criar novo grupo</option>
+                                  </select>
                                 </div>
                               )}
                             </div>
@@ -2319,11 +3165,124 @@ export default function Home() {
                         )
                       })}
                     </div>
-                    {(!groupedAccounts()[selectedGroup] || groupedAccounts()[selectedGroup].length === 0) && (
+                    {((selectedGroup.startsWith('custom-') 
+                        ? (getCustomGroupsWithProfiles()[selectedGroup.replace('custom-', '')]?.length || 0) === 0
+                        : (!groupedAccounts()[selectedGroup] || groupedAccounts()[selectedGroup].length === 0))) && (
                       <div className="text-center py-12 text-gray-500">
                         Nenhuma conta neste grupo.
                       </div>
                     )}
+                  </div>
+                )}
+                
+                {/* Modal para Criar Grupo */}
+                {showCreateGroupModal && (
+                  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+                      <h3 className="text-xl font-bold text-gray-800 mb-4">Criar Novo Grupo</h3>
+                      <input
+                        type="text"
+                        value={newGroupName}
+                        onChange={(e) => setNewGroupName(e.target.value)}
+                        placeholder="Nome do grupo (ex: meta, vip, etc)"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 mb-4"
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter' && newGroupName.trim()) {
+                            handleCreateGroup()
+                          }
+                        }}
+                        autoFocus
+                      />
+                      <div className="flex gap-3">
+                        <button
+                          onClick={handleCreateGroup}
+                          disabled={!newGroupName.trim()}
+                          className="flex-1 px-4 py-2 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          Criar
+                        </button>
+                        <button
+                          onClick={() => {
+                            setShowCreateGroupModal(false)
+                            setNewGroupName('')
+                            setPendingMoveEmail(null)
+                          }}
+                          className="flex-1 px-4 py-2 bg-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-400 transition-all"
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Modal para Editar Capa do Grupo */}
+                {editingGroupCover && (
+                  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+                      <h3 className="text-xl font-bold text-gray-800 mb-4">
+                        Editar {editingGroupCover.startsWith('custom-') ? 'Grupo' : 'Capa'}: {editingGroupCover.startsWith('custom-') 
+                          ? editingGroupCover.replace('custom-', '') 
+                          : (editingGroupCover === 'inicio' ? '< 1k' : editingGroupCover.toUpperCase())}
+                      </h3>
+                      
+                      {/* Campo para editar nome (apenas grupos personalizados) */}
+                      {editingGroupCover.startsWith('custom-') && (
+                        <div className="mb-4">
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Nome do Grupo:
+                          </label>
+                          <input
+                            type="text"
+                            value={editingGroupName}
+                            onChange={(e) => setEditingGroupName(e.target.value)}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                            placeholder="Nome do grupo"
+                          />
+                        </div>
+                      )}
+                      
+                      <label className="block mb-4">
+                        <span className="block text-sm font-medium text-gray-700 mb-2">Escolher imagem do PC:</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleFileSelect}
+                          className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100 cursor-pointer"
+                        />
+                      </label>
+                      {groupCoverImage && (
+                        <div className="mb-4">
+                          <p className="text-sm text-gray-600 mb-2">Preview:</p>
+                          <img 
+                            src={groupCoverImage} 
+                            alt="Preview"
+                            className="w-full h-32 object-cover rounded-lg border border-gray-300"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none'
+                            }}
+                          />
+                        </div>
+                      )}
+                      <div className="flex gap-3">
+                        <button
+                          onClick={handleSaveGroupCover}
+                          className="flex-1 px-4 py-2 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 transition-all"
+                        >
+                          Salvar
+                        </button>
+                        <button
+                          onClick={() => {
+                            setEditingGroupCover(null)
+                            setGroupCoverImage('')
+                            setEditingGroupName('')
+                          }}
+                          className="flex-1 px-4 py-2 bg-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-400 transition-all"
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
@@ -2339,7 +3298,7 @@ export default function Home() {
                       const today = new Date().toISOString().split('T')[0]
                       const newDailyPosting = {
                         ...dailyPosting,
-                        [today]: { selected: [], startTime: undefined, endTime: undefined }
+                        [today]: { groups: {}, calendarMarked: false }
                       }
                       setDailyPosting(newDailyPosting)
                       
@@ -2361,53 +3320,377 @@ export default function Home() {
 
                 {(() => {
                   const today = new Date().toISOString().split('T')[0]
-                  const todayData = dailyPosting[today] || { selected: [] }
+                  const todayData = dailyPosting[today] || { groups: {}, calendarMarked: false }
                   
-                  // Sempre exibir todas as contas
-                  let accountsToShow = accounts
+                  // Se não há grupo selecionado, mostrar cards dos grupos
+                  if (!dailyPostingGroup) {
+                    return (
+                      <>
+                        <div className="mb-6">
+                          <h3 className="text-xl font-bold text-gray-800 mb-4">Selecione um Grupo</h3>
+                          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                            {/* Grupos Personalizados */}
+                            {Object.keys(customGroups).length > 0 && Object.keys(customGroups).map((groupName) => {
+                              const accounts = getCustomGroupsWithProfiles()[groupName] || []
+                              const totalFollowers = accounts.reduce((sum, acc) => {
+                                return sum + parseFollowers(acc.followers || '0')
+                              }, 0)
+                              const groupData = customGroups[groupName]
+                              const coverImage = groupCovers[`custom-${groupName}`] || groupData?.coverImage || ''
+                              
+                              // Verificar se o grupo está completo
+                              const groupKey = `custom-${groupName}`
+                              const groupTodayData = todayData.groups[groupKey] || { selected: [] }
+                              const isGroupCompleted = groupTodayData.selected.length === accounts.length && accounts.length > 0
+                              
+                              return (
+                                  <div
+                                    key={`custom-${groupName}`}
+                                    onClick={() => setDailyPostingGroup(`custom-${groupName}`)}
+                                    className={`group relative bg-white rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 shadow-lg hover:shadow-2xl ${
+                                      isGroupCompleted 
+                                        ? 'ring-4 ring-green-400 ring-opacity-60 shadow-green-200' 
+                                        : 'border border-gray-200 hover:border-purple-400'
+                                    }`}
+                                  >
+                                    {/* Capa do Grupo */}
+                                    <div className={`relative h-32 bg-gradient-to-br from-purple-500 via-pink-500 to-purple-600 overflow-hidden ${isGroupCompleted ? 'opacity-90' : ''}`}>
+                                      {coverImage ? (
+                                        <img 
+                                          src={coverImage} 
+                                          alt={groupName}
+                                          className="w-full h-full object-cover"
+                                          onError={(e) => {
+                                            e.currentTarget.style.display = 'none'
+                                          }}
+                                        />
+                                      ) : (
+                                        <div className="w-full h-full flex items-center justify-center">
+                                          <span className="text-4xl text-white opacity-80">👥</span>
+                                        </div>
+                                      )}
+                                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent"></div>
+                                      {isGroupCompleted && (
+                                        <div className="absolute inset-0 bg-green-500/20 backdrop-blur-[1px]"></div>
+                                      )}
+                                    </div>
+                                    
+                                    {/* Conteúdo do Card */}
+                                    <div className={`p-5 ${isGroupCompleted ? 'bg-gradient-to-b from-green-50/50 to-white' : ''}`}>
+                                      <div className="text-center">
+                                        <h3 className="text-xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-2">
+                                          {groupName}
+                                        </h3>
+                                        <div className="flex items-center justify-center gap-4 mt-3">
+                                          <div>
+                                            <div className="text-2xl font-bold text-gray-800">
+                                              {accounts.length}
+                                            </div>
+                                            <div className="text-xs text-gray-500 uppercase tracking-wide font-semibold">contas</div>
+                                          </div>
+                                          <div className="w-px h-8 bg-gray-300"></div>
+                                          <div>
+                                            <div className="text-2xl font-bold text-gray-800">
+                                              {(totalFollowers / 1000).toFixed(1)}K
+                                            </div>
+                                            <div className="text-xs text-gray-500 uppercase tracking-wide font-semibold">seguidores</div>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )
+                              })}
+                            {/* Grupos Originais (por seguidores) */}
+                            {Object.entries(groupedAccounts())
+                              .sort((a, b) => {
+                                if (a[0] === 'inicio') return -1
+                                if (b[0] === 'inicio') return 1
+                                const numA = parseInt(a[0].replace('k', '')) || 0
+                                const numB = parseInt(b[0].replace('k', '')) || 0
+                                return numA - numB
+                              })
+                              .map(([groupName, accounts]) => {
+                                const totalFollowers = accounts.reduce((sum, acc) => {
+                                  return sum + parseFollowers(acc.followers || '0')
+                                }, 0)
+                                const coverImage = groupCovers[groupName] || ''
+                                
+                                // Verificar se o grupo está completo
+                                const groupTodayData = todayData.groups[groupName] || { selected: [] }
+                                const isGroupCompleted = groupTodayData.selected.length === accounts.length && accounts.length > 0
+                                
+                                return (
+                                  <div
+                                    key={groupName}
+                                    onClick={() => setDailyPostingGroup(groupName)}
+                                    className={`group relative bg-white rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 shadow-lg hover:shadow-2xl ${
+                                      isGroupCompleted 
+                                        ? 'ring-4 ring-green-400 ring-opacity-60 shadow-green-200' 
+                                        : 'border border-gray-200 hover:border-purple-400'
+                                    }`}
+                                  >
+                                    {/* Capa do Grupo */}
+                                    <div className={`relative h-32 bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-600 overflow-hidden ${isGroupCompleted ? 'opacity-90' : ''}`}>
+                                      {coverImage ? (
+                                        <img 
+                                          src={coverImage} 
+                                          alt={groupName}
+                                          className="w-full h-full object-cover"
+                                          onError={(e) => {
+                                            e.currentTarget.style.display = 'none'
+                                          }}
+                                        />
+                                      ) : (
+                                        <div className="w-full h-full flex items-center justify-center">
+                                          <span className="text-5xl text-white opacity-90">
+                                            {groupName === 'inicio' ? '🚀' : '⭐'}
+                                          </span>
+                                        </div>
+                                      )}
+                                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent"></div>
+                                      {isGroupCompleted && (
+                                        <div className="absolute inset-0 bg-green-500/20 backdrop-blur-[1px]"></div>
+                                      )}
+                                      <div className="absolute bottom-3 left-3 right-3">
+                                        <div className="text-2xl font-black text-white drop-shadow-lg">
+                                          {groupName === 'inicio' ? '< 1k' : groupName.toUpperCase()}
+                                        </div>
+                                      </div>
+                                    </div>
+                                    
+                                    {/* Conteúdo do Card */}
+                                    <div className={`p-5 ${isGroupCompleted ? 'bg-gradient-to-b from-green-50/50 to-white' : ''}`}>
+                                      <div className="text-center">
+                                        <div className="flex items-center justify-center gap-4 mt-2">
+                                          <div>
+                                            <div className="text-2xl font-bold text-gray-800">
+                                              {accounts.length}
+                                            </div>
+                                            <div className="text-xs text-gray-500 uppercase tracking-wide font-semibold">contas</div>
+                                          </div>
+                                          <div className="w-px h-8 bg-gray-300"></div>
+                                          <div>
+                                            <div className="text-2xl font-bold text-gray-800">
+                                              {(totalFollowers / 1000).toFixed(1)}K
+                                            </div>
+                                            <div className="text-xs text-gray-500 uppercase tracking-wide font-semibold">seguidores</div>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )
+                              })}
+                          </div>
+                          {Object.keys(groupedAccounts()).length === 0 && Object.keys(getCustomGroupsWithProfiles()).length === 0 && (
+                            <div className="text-center py-12 text-gray-500">
+                              <p className="text-lg font-medium text-gray-700 mb-2">Nenhum grupo disponível</p>
+                              <p className="text-sm">Execute a análise primeiro ou selecione um histórico.</p>
+                            </div>
+                          )}
+                        </div>
+                        
+                        {/* Histórico sempre visível */}
+                        {postingHistory.length > 0 && (
+                          <div className="mt-8 pt-6 border-t border-gray-200">
+                            <h3 className="text-lg font-bold text-gray-800 mb-4">📋 Histórico de Postagens</h3>
+                            <div className="space-y-2 max-h-64 overflow-y-auto">
+                              {postingHistory.map((item, index) => {
+                                const formatDate = (dateStr: string): string => {
+                                  if (!dateStr) return ''
+                                  const parts = dateStr.split('-')
+                                  if (parts.length === 3) {
+                                    return `${parts[2]}/${parts[1]}/${parts[0]}`
+                                  }
+                                  const date = new Date(dateStr)
+                                  if (!isNaN(date.getTime())) {
+                                    return date.toLocaleDateString('pt-BR')
+                                  }
+                                  return dateStr
+                                }
+                                
+                                const groups = item.groups || []
+                                const groupsDisplay = groups.map(g => {
+                                  if (g.startsWith('custom-')) {
+                                    return g.replace('custom-', '')
+                                  }
+                                  return g === 'inicio' ? '< 1k' : g.toUpperCase()
+                                }).join(', ')
+                                
+                                return (
+                                  <div
+                                    key={index}
+                                    className="flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-lg"
+                                  >
+                                    <div className="flex-1">
+                                      <div className="font-semibold text-gray-800">
+                                        {formatDate(item.date)}
+                                      </div>
+                                      {groupsDisplay && (
+                                        <div className="text-sm font-medium text-purple-600 mb-1">
+                                          {groupsDisplay}
+                                        </div>
+                                      )}
+                                      <div className="text-sm text-gray-600">
+                                        🕐 Início: {new Date(item.startTime).toLocaleTimeString('pt-BR')} • 
+                                        Fim: {new Date(item.endTime).toLocaleTimeString('pt-BR')} • 
+                                        {item.totalAccounts} contas
+                                      </div>
+                                    </div>
+                                    <button
+                                      onClick={async () => {
+                                        const itemToRemove = postingHistory[index]
+                                        
+                                        try {
+                                          const response = await fetch('/api/daily-posting', {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({ removeFromHistory: index }),
+                                          })
+                                          
+                                          if (response.ok) {
+                                            const newHistory = postingHistory.filter((_, i) => i !== index)
+                                            setPostingHistory(newHistory)
+                                            
+                                            // Desmarcar calendário e resetar grupos do dia
+                                            if (itemToRemove && itemToRemove.date) {
+                                              const dateToCheck = itemToRemove.date
+                                              
+                                              // Verificar se há outros itens desse dia
+                                              const hasOtherItemsOnSameDate = newHistory.some(item => item.date === dateToCheck)
+                                              
+                                              // Se não há mais itens desse dia, desmarcar calendário
+                                              if (!hasOtherItemsOnSameDate) {
+                                                const newMarkedDays = { ...markedDays }
+                                                delete newMarkedDays[dateToCheck]
+                                                setMarkedDays(newMarkedDays)
+                                                
+                                                try {
+                                                  await fetch('/api/calendar', {
+                                                    method: 'POST',
+                                                    headers: {
+                                                      'Content-Type': 'application/json',
+                                                    },
+                                                    body: JSON.stringify({
+                                                      markedDays: newMarkedDays,
+                                                      sequences: sequences
+                                                    }),
+                                                  })
+                                                } catch (e) {
+                                                  console.error('Erro ao desmarcar dia no calendário:', e)
+                                                }
+                                              }
+                                              
+                                              // Resetar grupos do dia para 0%
+                                              const newDailyPosting = { ...dailyPosting }
+                                              if (newDailyPosting[dateToCheck]) {
+                                                newDailyPosting[dateToCheck] = { groups: {}, calendarMarked: false }
+                                                setDailyPosting(newDailyPosting)
+                                                
+                                                try {
+                                                  await fetch('/api/daily-posting', {
+                                                    method: 'POST',
+                                                    headers: { 'Content-Type': 'application/json' },
+                                                    body: JSON.stringify({ postingData: newDailyPosting }),
+                                                  })
+                                                } catch (e) {
+                                                  console.error('Erro ao resetar grupos:', e)
+                                                }
+                                              }
+                                            }
+                                            
+                                            // Recarregar histórico do servidor
+                                            try {
+                                              const historyResponse = await fetch('/api/daily-posting')
+                                              if (historyResponse.ok) {
+                                                const historyData = await historyResponse.json()
+                                                if (historyData.history) {
+                                                  setPostingHistory(historyData.history)
+                                                }
+                                                if (historyData.postingData) {
+                                                  setDailyPosting(historyData.postingData)
+                                                }
+                                              }
+                                            } catch (e) {
+                                              console.error('Erro ao recarregar histórico:', e)
+                                            }
+                                          } else {
+                                            alert('Erro ao remover item do histórico. Tente novamente.')
+                                          }
+                                        } catch (e) {
+                                          console.error('Erro ao remover do histórico:', e)
+                                          alert('Erro ao remover item do histórico. Tente novamente.')
+                                        }
+                                      }}
+                                      className="px-3 py-1 bg-red-500 text-white text-sm font-semibold rounded hover:bg-red-600 transition-all"
+                                    >
+                                      🗑️ Remover
+                                    </button>
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    )
+                  }
                   
-                  // Contar todas as contas selecionadas
-                  const selectedCount = todayData.selected.length
-                  // Total sempre é todas as contas disponíveis
-                  const totalAccounts = accounts.length
+                  // Obter contas do grupo selecionado
+                  let groupProfiles: ProfileData[] = []
+                  let groupDisplayName = ''
                   
-                  // Verificar se todas as contas foram completadas hoje
-                  const isCompleted = postingHistory.some(item => item.date === today)
+                  if (dailyPostingGroup.startsWith('custom-')) {
+                    const groupName = dailyPostingGroup.replace('custom-', '')
+                    groupProfiles = getCustomGroupsWithProfiles()[groupName] || []
+                    groupDisplayName = groupName
+                  } else {
+                    groupProfiles = groupedAccounts()[dailyPostingGroup] || []
+                    groupDisplayName = dailyPostingGroup === 'inicio' ? '< 1k' : dailyPostingGroup.toUpperCase()
+                  }
+                  
+                  // Dados do grupo para hoje
+                  const groupData = todayData.groups[dailyPostingGroup] || { selected: [] }
+                  const selectedCount = groupData.selected.length
+                  const totalAccounts = groupProfiles.length
+                  const isGroupCompleted = selectedCount === totalAccounts && totalAccounts > 0
                   const remaining = totalAccounts - selectedCount
-
+                  
                   return (
                     <>
-
-                      {isCompleted ? (
+                      {/* Botão Voltar */}
+                      <div className="mb-6">
+                        <button
+                          onClick={() => setDailyPostingGroup(null)}
+                          className="px-5 py-2.5 bg-white rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors shadow-sm border border-gray-300 hover:border-purple-400 flex items-center gap-2"
+                        >
+                          <span>←</span>
+                          <span>Voltar para Grupos</span>
+                        </button>
+                      </div>
+                      
+                      {isGroupCompleted ? (
                         <div className="bg-green-50 border-2 border-green-500 rounded-lg p-6 mb-6">
                           <div className="text-center">
                             <div className="text-3xl mb-2">✅</div>
-                            <h3 className="text-xl font-bold text-green-800 mb-2">Concluído para hoje!</h3>
+                            <h3 className="text-xl font-bold text-green-800 mb-2">Grupo Concluído!</h3>
                             <p className="text-green-700 mb-4">
-                              Todas as {totalAccounts} contas foram processadas hoje.
+                              Todas as {totalAccounts} contas do grupo <strong>{groupDisplayName}</strong> foram processadas.
                             </p>
-                            <p className="text-sm text-green-600">
-                              Próxima postagem: Amanhã ({new Date(Date.now() + 86400000).toLocaleDateString('pt-BR')})
-                            </p>
-                            {(() => {
-                              // Buscar os dados de início e fim do histórico de hoje
-                              const historyItem = postingHistory.find(item => 
-                                item.date === today
-                              )
-                              return historyItem && historyItem.startTime && historyItem.endTime ? (
-                                <div className="mt-4 text-sm text-green-700">
-                                  <div>🕐 Início: {new Date(historyItem.startTime).toLocaleTimeString('pt-BR')}</div>
-                                  <div>🕐 Fim: {new Date(historyItem.endTime).toLocaleTimeString('pt-BR')}</div>
-                                </div>
-                              ) : null
-                            })()}
+                            {groupData.startTime && groupData.endTime && (
+                              <div className="mt-4 text-sm text-green-700">
+                                <div>🕐 Início: {new Date(groupData.startTime).toLocaleTimeString('pt-BR')}</div>
+                                <div>🕐 Fim: {new Date(groupData.endTime).toLocaleTimeString('pt-BR')}</div>
+                              </div>
+                            )}
                           </div>
                         </div>
                       ) : (
                         <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-4 mb-6">
                           <div className="flex items-center justify-between mb-2">
                             <span className="font-semibold text-gray-700">
-                              Progresso: {selectedCount} / {totalAccounts}
+                              Grupo: <strong>{groupDisplayName}</strong> • Progresso: {selectedCount} / {totalAccounts}
                             </span>
                             <span className="text-sm text-gray-600">Faltam {remaining}</span>
                           </div>
@@ -2415,49 +3698,53 @@ export default function Home() {
                           <div className="w-full bg-gray-200 rounded-full h-3">
                             <div
                               className="bg-gradient-to-r from-blue-500 to-purple-600 h-3 rounded-full transition-all duration-300"
-                              style={{ width: `${(selectedCount / totalAccounts) * 100}%` }}
+                              style={{ width: `${totalAccounts > 0 ? (selectedCount / totalAccounts) * 100 : 0}%` }}
                             ></div>
                           </div>
-                          {todayData.startTime && (
+                          {groupData.startTime && (
                             <div className="mt-2 text-sm text-gray-600">
-                              🕐 Início: {new Date(todayData.startTime).toLocaleTimeString('pt-BR')}
+                              🕐 Início: {new Date(groupData.startTime).toLocaleTimeString('pt-BR')}
                             </div>
                           )}
                         </div>
                       )}
 
                       <div className="space-y-2 max-h-96 overflow-y-auto">
-                        {accountsToShow.length === 0 ? (
+                        {groupProfiles.length === 0 ? (
                           <div className="text-center py-8 text-gray-500">
-                            <p className="text-sm font-semibold">Nenhuma conta disponível.</p>
+                            <p className="text-sm font-semibold">Nenhuma conta disponível neste grupo.</p>
                           </div>
-                        ) : isCompleted && accountsToShow
-                          .filter((account) => !todayData.selected.includes(account.email))
-                          .length === 0 ? (
+                        ) : isGroupCompleted ? (
                           <div className="text-center py-8 text-green-500">
-                            <p className="text-sm font-semibold">✅ Todas as contas já foram selecionadas!</p>
+                            <p className="text-sm font-semibold">✅ Todas as contas deste grupo já foram selecionadas!</p>
                           </div>
                         ) : (
-                          accountsToShow
-                            .filter((account) => !todayData.selected.includes(account.email))
-                            .map((account, index) => {
-                            const accountProfile = profiles.find(p => p.email === account.email) || historyProfiles.find(p => p.email === account.email)
+                          groupProfiles
+                            .filter((profile) => !groupData.selected.includes(profile.email?.toLowerCase() || ''))
+                            .map((profile, index) => {
+                            const accountProfile = profiles.find(p => p.email === profile.email) || historyProfiles.find(p => p.email === profile.email) || profile
                             
                             const handleClick = async () => {
-                              if (isCompleted) return
+                              if (isGroupCompleted) return
 
-                              const newSelected = [...todayData.selected, account.email]
-                              
-                              // Verificar se completou todas as contas (sempre todas, não apenas do grupo)
-                              const selectedInGroupAfter = newSelected // Todas as contas selecionadas
+                              const profileEmail = (profile.email || '').toLowerCase()
+                              const newSelected = [...groupData.selected, profileEmail]
                               
                               const now = new Date().toISOString()
+                              const isGroupComplete = newSelected.length === totalAccounts
+                              
+                              const newGroupData = {
+                                selected: newSelected,
+                                startTime: newSelected.length === 1 && !groupData.startTime ? now : groupData.startTime,
+                                endTime: isGroupComplete ? now : groupData.endTime
+                              }
+                              
                               const newTodayData = {
                                 ...todayData,
-                                selected: newSelected,
-                                startTime: selectedInGroupAfter.length === 1 && !todayData.startTime ? now : todayData.startTime,
-                                endTime: selectedInGroupAfter.length === totalAccounts ? now : (selectedInGroupAfter.length < totalAccounts ? undefined : todayData.endTime)
-                                // Remover campos de grupo - não usamos mais grupos
+                                groups: {
+                                  ...todayData.groups,
+                                  [dailyPostingGroup]: newGroupData
+                                }
                               }
 
                               const newDailyPosting = {
@@ -2467,64 +3754,135 @@ export default function Home() {
 
                               setDailyPosting(newDailyPosting)
 
-                              if (account.email) {
+                              if (profile.email) {
                                 try {
-                                  await navigator.clipboard.writeText(account.email)
+                                  await navigator.clipboard.writeText(profile.email)
                                 } catch (e) {
                                   console.error('Erro ao copiar email:', e)
                                 }
                               }
 
-                              try {
-                                const requestBody: any = { postingData: newDailyPosting }
-                                
-                                // Se completou, adicionar ao histórico
-                                if (selectedInGroupAfter.length === totalAccounts && newTodayData.startTime && newTodayData.endTime) {
-                                  requestBody.addToHistory = {
-                                    date: today,
-                                    startTime: newTodayData.startTime,
-                                    endTime: newTodayData.endTime,
-                                    totalAccounts: totalAccounts
-                                  }
-                                }
-                                
-                                const response = await fetch('/api/daily-posting', {
-                                  method: 'POST',
-                                  headers: { 'Content-Type': 'application/json' },
-                                  body: JSON.stringify(requestBody),
-                                })
-                                
-                                if (response.ok && requestBody.addToHistory) {
-                                  // Usar a resposta do servidor que contém a data corrigida
-                                  const responseData = await response.json()
-                                  const historyEntry = responseData.historyEntry || requestBody.addToHistory
-                                  const updatedHistory = [historyEntry, ...postingHistory]
-                                  setPostingHistory(updatedHistory)
+                              // Se completou o grupo, adicionar ao histórico e marcar calendário
+                              if (isGroupComplete && newGroupData.startTime && newGroupData.endTime) {
+                                try {
+                                  // Verificar se já existe histórico para hoje (buscar pelo primeiro item que pode ter data diferente devido a timezone)
+                                  // Buscar pelo histórico mais recente que pode ser de hoje
+                                  const todayDateStr = today
+                                  const existingHistoryIndex = postingHistory.findIndex(item => {
+                                    // Comparar datas normalizadas (sem hora)
+                                    const itemDate = item.date ? item.date.split('T')[0] : ''
+                                    return itemDate === todayDateStr
+                                  })
                                   
-                                  // Usar a data do servidor para marcar no calendário
-                                  const serverDate = historyEntry.date || today
-                                  if (!markedDays[serverDate]) {
-                                    const newMarkedDays = { ...markedDays, [serverDate]: true }
-                                    setMarkedDays(newMarkedDays)
+                                  let requestBody: any = { postingData: newDailyPosting }
+                                  
+                                  if (existingHistoryIndex >= 0) {
+                                    // Atualizar histórico existente - adicionar grupo
+                                    const existing = postingHistory[existingHistoryIndex]
+                                    const groups = [...(existing.groups || [])]
+                                    if (!groups.includes(dailyPostingGroup)) {
+                                      groups.push(dailyPostingGroup)
+                                    }
                                     
-                                    try {
-                                      await fetch('/api/calendar', {
-                                        method: 'POST',
-                                        headers: {
-                                          'Content-Type': 'application/json',
-                                        },
-                                        body: JSON.stringify({
-                                          markedDays: newMarkedDays,
-                                          sequences: sequences
-                                        }),
-                                      })
-                                    } catch (e) {
-                                      console.error('Erro ao marcar dia no calendário:', e)
+                                    requestBody.updateHistory = {
+                                      index: existingHistoryIndex,
+                                      groups: groups,
+                                      totalAccounts: (existing.totalAccounts || 0) + totalAccounts,
+                                      endTime: now
+                                    }
+                                  } else {
+                                    // Criar novo histórico - marcar calendário apenas se ainda não foi marcado hoje
+                                    requestBody.addToHistory = {
+                                      date: today,
+                                      startTime: newGroupData.startTime,
+                                      endTime: now,
+                                      totalAccounts: totalAccounts,
+                                      groups: [dailyPostingGroup]
+                                    }
+                                    
+                                    // Marcar calendário apenas se ainda não foi marcado hoje
+                                    if (!todayData.calendarMarked) {
+                                      const newMarkedDays = { ...markedDays, [today]: true }
+                                      setMarkedDays(newMarkedDays)
+                                      newTodayData.calendarMarked = true
+                                      
+                                      try {
+                                        await fetch('/api/calendar', {
+                                          method: 'POST',
+                                          headers: {
+                                            'Content-Type': 'application/json',
+                                          },
+                                          body: JSON.stringify({
+                                            markedDays: newMarkedDays,
+                                            sequences: sequences
+                                          }),
+                                        })
+                                      } catch (e) {
+                                        console.error('Erro ao marcar dia no calendário:', e)
+                                      }
                                     }
                                   }
+                                  
+                                  const response = await fetch('/api/daily-posting', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify(requestBody),
+                                  })
+                                  
+                                  if (response.ok) {
+                                    const responseData = await response.json()
+                                    
+                                    if (requestBody.addToHistory) {
+                                      const historyEntry = responseData.historyEntry || requestBody.addToHistory
+                                      const updatedHistory = [historyEntry, ...postingHistory]
+                                      setPostingHistory(updatedHistory)
+                                    } else if (requestBody.updateHistory) {
+                                      // Usar histórico retornado pela API se disponível
+                                      if (responseData.history) {
+                                        setPostingHistory(responseData.history)
+                                      } else {
+                                        // Atualizar histórico localmente como fallback
+                                        const updatedHistory = [...postingHistory]
+                                        const existingIndex = updatedHistory.findIndex(item => {
+                                          const itemDate = item.date ? item.date.split('T')[0] : ''
+                                          return itemDate === todayDateStr
+                                        })
+                                        
+                                        if (existingIndex >= 0) {
+                                          updatedHistory[existingIndex] = {
+                                            ...updatedHistory[existingIndex],
+                                            groups: requestBody.updateHistory.groups,
+                                            totalAccounts: requestBody.updateHistory.totalAccounts,
+                                            endTime: requestBody.updateHistory.endTime
+                                          }
+                                          setPostingHistory(updatedHistory)
+                                        } else {
+                                          // Se não encontrou, recarregar do servidor
+                                          const historyResponse = await fetch('/api/daily-posting')
+                                          if (historyResponse.ok) {
+                                            const historyData = await historyResponse.json()
+                                            if (historyData.history) {
+                                              setPostingHistory(historyData.history)
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                } catch (e) {
+                                  console.error('Erro ao salvar postagens:', e)
                                 }
-                              } catch (e) {
-                                console.error('Erro ao salvar postagens:', e)
+                              } else {
+                                // Apenas salvar progresso
+                                try {
+                                  await fetch('/api/daily-posting', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ postingData: newDailyPosting }),
+                                  })
+                                } catch (e) {
+                                  console.error('Erro ao salvar postagens:', e)
+                                }
                               }
                             }
 
@@ -2538,7 +3896,7 @@ export default function Home() {
                                   {accountProfile?.avatar ? (
                                     <img
                                       src={accountProfile.avatar}
-                                      alt={account.name || account.email}
+                                      alt={profile.name || profile.email || 'Avatar'}
                                       className="w-12 h-12 rounded-full border-2 border-purple-400 object-cover"
                                       onError={(e) => {
                                         e.currentTarget.style.display = 'none'
@@ -2547,17 +3905,17 @@ export default function Home() {
                                   ) : (
                                     <div className="w-12 h-12 rounded-full bg-gray-200 border-2 border-purple-400 flex items-center justify-center">
                                       <span className="text-sm text-purple-600 font-bold">
-                                        {(account.name || account.email || '?')[0]?.toUpperCase()}
+                                        {(profile.name || profile.email || '?')[0]?.toUpperCase()}
                                       </span>
                                     </div>
                                   )}
                                 </div>
                                 <div className="flex-1 min-w-0">
                                   <div className="font-semibold text-gray-800 truncate">
-                                    {account.name || account.email || 'N/A'}
+                                    {cleanDisplayName(profile.name || profile.displayName || profile.email || 'N/A')}
                                   </div>
                                   <div className="text-sm text-gray-600 truncate">
-                                    {account.email}
+                                    {profile.email}
                                   </div>
                                 </div>
                               </div>
@@ -2572,15 +3930,12 @@ export default function Home() {
                           <h3 className="text-lg font-bold text-gray-800 mb-4">📋 Histórico de Postagens</h3>
                           <div className="space-y-2 max-h-64 overflow-y-auto">
                             {postingHistory.map((item, index) => {
-                              // Formatar data corretamente (parse manual para evitar problema de timezone)
                               const formatDate = (dateStr: string): string => {
                                 if (!dateStr) return ''
                                 const parts = dateStr.split('-')
                                 if (parts.length === 3) {
-                                  // Formato YYYY-MM-DD -> DD/MM/YYYY
                                   return `${parts[2]}/${parts[1]}/${parts[0]}`
                                 }
-                                // Se já estiver formatada ou formato diferente, tentar parsear
                                 const date = new Date(dateStr)
                                 if (!isNaN(date.getTime())) {
                                   return date.toLocaleDateString('pt-BR')
@@ -2588,8 +3943,16 @@ export default function Home() {
                                 return dateStr
                               }
                               
+                              const groups = item.groups || []
+                              const groupsDisplay = groups.map(g => {
+                                if (g.startsWith('custom-')) {
+                                  return g.replace('custom-', '')
+                                }
+                                return g === 'inicio' ? '< 1k' : g.toUpperCase()
+                              }).join(', ')
+                              
                               return (
-                                                                <div
+                                <div
                                   key={index}
                                   className="flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-lg"
                                 >
@@ -2597,87 +3960,107 @@ export default function Home() {
                                     <div className="font-semibold text-gray-800">
                                       {formatDate(item.date)}
                                     </div>
+                                    {groupsDisplay && (
+                                      <div className="text-sm font-medium text-purple-600 mb-1">
+                                        {groupsDisplay}
+                                      </div>
+                                    )}
                                     <div className="text-sm text-gray-600">
                                       🕐 Início: {new Date(item.startTime).toLocaleTimeString('pt-BR')} • 
                                       Fim: {new Date(item.endTime).toLocaleTimeString('pt-BR')} • 
                                       {item.totalAccounts} contas
                                     </div>
                                   </div>
-                                <button
-                                  onClick={async () => {
-                                    const itemToRemove = postingHistory[index]
-                                    
-                                    try {
-                                      const response = await fetch('/api/daily-posting', {
-                                        method: 'POST',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({ removeFromHistory: index }),
-                                      })
+                                  <button
+                                    onClick={async () => {
+                                      const itemToRemove = postingHistory[index]
                                       
-                                      if (response.ok) {
-                                        // Remover do estado local apenas após confirmação do servidor
-                                        const newHistory = postingHistory.filter((_, i) => i !== index)
-                                        setPostingHistory(newHistory)
+                                      try {
+                                        const response = await fetch('/api/daily-posting', {
+                                          method: 'POST',
+                                          headers: { 'Content-Type': 'application/json' },
+                                          body: JSON.stringify({ removeFromHistory: index }),
+                                        })
                                         
-
-                                        // Verificar se ainda há outros itens desse mesmo dia no histórico
-                                        // Só remover a marcação do calendário se não houver mais nenhum item desse dia
-                                        if (itemToRemove && itemToRemove.date) {
-                                          const dateToCheck = itemToRemove.date
-                                          const hasOtherItemsOnSameDate = newHistory.some(item => item.date === dateToCheck)
+                                        if (response.ok) {
+                                          const newHistory = postingHistory.filter((_, i) => i !== index)
+                                          setPostingHistory(newHistory)
                                           
-                                          // Se não há mais itens desse dia, remover a marcação do calendário
-                                          if (!hasOtherItemsOnSameDate) {
-                                            const newMarkedDays = { ...markedDays }
-                                            delete newMarkedDays[dateToCheck]
-                                            setMarkedDays(newMarkedDays)
+                                          // Desmarcar calendário e resetar grupos do dia
+                                          if (itemToRemove && itemToRemove.date) {
+                                            const dateToCheck = itemToRemove.date
                                             
-                                            try {
-                                              await fetch('/api/calendar', {
-                                                method: 'POST',
-                                                headers: {
-                                                  'Content-Type': 'application/json',
-                                                },
-                                                body: JSON.stringify({
-                                                  markedDays: newMarkedDays,
-                                                  sequences: sequences
-                                                }),
-                                              })
-                                            } catch (e) {
-                                              console.error('Erro ao desmarcar dia no calendário:', e)
+                                            // Verificar se há outros itens desse dia
+                                            const hasOtherItemsOnSameDate = newHistory.some(item => item.date === dateToCheck)
+                                            
+                                            // Se não há mais itens desse dia, desmarcar calendário
+                                            if (!hasOtherItemsOnSameDate) {
+                                              const newMarkedDays = { ...markedDays }
+                                              delete newMarkedDays[dateToCheck]
+                                              setMarkedDays(newMarkedDays)
+                                              
+                                              try {
+                                                await fetch('/api/calendar', {
+                                                  method: 'POST',
+                                                  headers: {
+                                                    'Content-Type': 'application/json',
+                                                  },
+                                                  body: JSON.stringify({
+                                                    markedDays: newMarkedDays,
+                                                    sequences: sequences
+                                                  }),
+                                                })
+                                              } catch (e) {
+                                                console.error('Erro ao desmarcar dia no calendário:', e)
+                                              }
+                                            }
+                                            
+                                            // Resetar grupos do dia para 0%
+                                            const newDailyPosting = { ...dailyPosting }
+                                            if (newDailyPosting[dateToCheck]) {
+                                              newDailyPosting[dateToCheck] = { groups: {}, calendarMarked: false }
+                                              setDailyPosting(newDailyPosting)
+                                              
+                                              try {
+                                                await fetch('/api/daily-posting', {
+                                                  method: 'POST',
+                                                  headers: { 'Content-Type': 'application/json' },
+                                                  body: JSON.stringify({ postingData: newDailyPosting }),
+                                                })
+                                              } catch (e) {
+                                                console.error('Erro ao resetar grupos:', e)
+                                              }
                                             }
                                           }
-                                        }
-                                        
-                                        // Recarregar o histórico do servidor para garantir sincronização
-                                        try {
-                                          const historyResponse = await fetch('/api/daily-posting')
-                                          if (historyResponse.ok) {
-                                            const historyData = await historyResponse.json()
-                                            if (historyData.history) {
-                                              setPostingHistory(historyData.history)
+                                          
+                                          // Recarregar histórico do servidor
+                                          try {
+                                            const historyResponse = await fetch('/api/daily-posting')
+                                            if (historyResponse.ok) {
+                                              const historyData = await historyResponse.json()
+                                              if (historyData.history) {
+                                                setPostingHistory(historyData.history)
+                                              }
+                                              if (historyData.postingData) {
+                                                setDailyPosting(historyData.postingData)
+                                              }
                                             }
-                                            if (historyData.postingData) {
-                                              setDailyPosting(historyData.postingData)
-                                            }
+                                          } catch (e) {
+                                            console.error('Erro ao recarregar histórico:', e)
                                           }
-                                        } catch (e) {
-                                          console.error('Erro ao recarregar histórico:', e)
+                                        } else {
+                                          alert('Erro ao remover item do histórico. Tente novamente.')
                                         }
-                                      } else {
-                                        console.error('Erro ao remover do histórico: resposta não OK')
+                                      } catch (e) {
+                                        console.error('Erro ao remover do histórico:', e)
                                         alert('Erro ao remover item do histórico. Tente novamente.')
                                       }
-                                    } catch (e) {
-                                      console.error('Erro ao remover do histórico:', e)
-                                      alert('Erro ao remover item do histórico. Tente novamente.')
-                                    }
-                                  }}
-                                  className="px-3 py-1 bg-red-500 text-white text-sm font-semibold rounded hover:bg-red-600 transition-all"
-                                >
-                                  🗑️ Remover
-                                </button>
-                              </div>
+                                    }}
+                                    className="px-3 py-1 bg-red-500 text-white text-sm font-semibold rounded hover:bg-red-600 transition-all"
+                                  >
+                                    🗑️ Remover
+                                  </button>
+                                </div>
                               )
                             })}
                           </div>
@@ -2883,6 +4266,30 @@ export default function Home() {
             {activeTab === 'valores' && (
               <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
                 <h2 className="text-2xl font-bold text-gray-800 mb-6">💰 Valores por Grupo</h2>
+                
+                {/* Campo de Taxa */}
+                <div className="mb-6 p-4 bg-purple-50 rounded-lg border border-purple-200">
+                  <label className="block text-sm font-semibold text-gray-800 mb-2">
+                    Taxa (%)
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.01"
+                      value={taxa}
+                      onChange={(e) => {
+                        const newTaxa = parseFloat(e.target.value) || 0
+                        setTaxa(newTaxa)
+                      }}
+                      className="w-32 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      placeholder="15.98"
+                    />
+                    <span className="text-sm text-gray-600">%</span>
+                  </div>
+                </div>
+                
                 <p className="text-sm text-gray-600 mb-6">
                   Configure o valor em reais para cada grupo de seguidores. O sistema calculará automaticamente o total baseado na quantidade de contas em cada grupo.
                 </p>
@@ -2912,37 +4319,68 @@ export default function Home() {
                           const accountCount = groups[groupName].length
                           const currentValue = valores[groupName] || 0
                           
+                          // Valor por unidade com taxa aplicada (valor base + taxa)
+                          const valorPorUnidade = currentValue * (1 + taxa / 100)
+                          // Valor total do grupo (com taxa)
+                          const valorTotalGrupo = valorPorUnidade * accountCount
+                          // Valor que ele ganha (sem taxa) - valor base total
+                          const valorQueGanha = currentValue * accountCount
+                          
                           return (
                             <div
                               key={groupName}
-                              className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg border border-gray-200"
+                              className="p-4 bg-gray-50 rounded-lg border border-gray-200"
                             >
-                              <div className="flex-1">
-                                <div className="font-bold text-gray-800 mb-1">
-                                  {groupName === 'inicio' ? '< 1k' : groupName.toUpperCase()}
+                              <div className="flex items-center justify-between mb-3">
+                                <div>
+                                  <div className="font-bold text-gray-800 mb-1">
+                                    {groupName === 'inicio' ? '< 1k' : groupName.toUpperCase()}
+                                  </div>
+                                  <div className="text-sm text-gray-600">
+                                    {accountCount} conta(s)
+                                  </div>
                                 </div>
-                                <div className="text-sm text-gray-600">
-                                  {accountCount} conta(s)
+                                <div className="flex items-center gap-2">
+                                  <span className="text-sm text-gray-700 font-medium">R$</span>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    value={currentValue}
+                                    onChange={(e) => {
+                                      const newValue = parseFloat(e.target.value) || 0
+                                      setValores({
+                                        ...valores,
+                                        [groupName]: newValue
+                                      })
+                                    }}
+                                    className="w-32 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                    placeholder="0.00"
+                                  />
                                 </div>
                               </div>
-                              <div className="flex items-center gap-2">
-                                <span className="text-sm text-gray-700 font-medium">R$</span>
-                                <input
-                                  type="number"
-                                  min="0"
-                                  step="0.01"
-                                  value={currentValue}
-                                  onChange={(e) => {
-                                    const newValue = parseFloat(e.target.value) || 0
-                                    setValores({
-                                      ...valores,
-                                      [groupName]: newValue
-                                    })
-                                  }}
-                                  className="w-32 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                  placeholder="0.00"
-                                />
-                              </div>
+                              {currentValue > 0 && (
+                                <div className="pt-3 border-t border-gray-300 space-y-2">
+                                  <div className="flex justify-between items-center">
+                                    <span className="text-sm text-gray-600">Valor por unidade (com {taxa.toFixed(2).replace('.', ',')}%):</span>
+                                    <span className="text-base font-bold text-green-600">
+                                      R$ {valorPorUnidade.toFixed(2).replace('.', ',')}
+                                    </span>
+                                  </div>
+                                  <div className="flex justify-between items-center">
+                                    <span className="text-sm text-gray-600">💰 Valor que você ganha (sem taxa):</span>
+                                    <span className="text-base font-bold text-blue-600">
+                                      R$ {valorQueGanha.toFixed(2).replace('.', ',')}
+                                    </span>
+                                  </div>
+                                  <div className="flex justify-between items-center pt-2 border-t border-gray-200">
+                                    <span className="text-sm font-semibold text-gray-800">Valor total do grupo (com taxa):</span>
+                                    <span className="text-lg font-bold text-purple-600">
+                                      R$ {valorTotalGrupo.toFixed(2).replace('.', ',')}
+                                    </span>
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           )
                         })}
@@ -2957,11 +4395,11 @@ export default function Home() {
                       const response = await fetch('/api/valores', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ valores }),
+                        body: JSON.stringify({ valores, taxa }),
                       })
                       
                       if (response.ok) {
-                        alert('Valores salvos com sucesso!')
+                        alert('Valores e taxa salvos com sucesso!')
                       } else {
                         const errorData = await response.json()
                         alert(errorData.error || 'Erro ao salvar valores')
@@ -2973,7 +4411,7 @@ export default function Home() {
                   }}
                   className="w-full px-6 py-3 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-all"
                 >
-                  💾 Salvar Valores
+                  💾 Salvar Valores e Taxa
                 </button>
               </div>
             )}

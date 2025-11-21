@@ -12,13 +12,19 @@ const valoresFilePath = path.join(process.cwd(), 'public', 'valores-data.json')
 export async function GET(request: NextRequest) {
   try {
     if (!existsSync(valoresFilePath)) {
-      return NextResponse.json({ valores: {} })
+      return NextResponse.json({ 
+        valores: {},
+        taxa: 15.98
+      })
     }
 
     const content = await readFile(valoresFilePath, 'utf-8')
     const data = JSON.parse(content)
     
-    return NextResponse.json({ valores: data.valores || {} })
+    return NextResponse.json({ 
+      valores: data.valores || {},
+      taxa: data.taxa !== undefined ? data.taxa : 15.98
+    })
   } catch (error: any) {
     console.error('Erro ao carregar valores:', error)
     return NextResponse.json(
@@ -36,7 +42,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { valores } = await request.json()
+    const { valores, taxa } = await request.json()
 
     if (!valores || typeof valores !== 'object') {
       return NextResponse.json(
@@ -53,6 +59,7 @@ export async function POST(request: NextRequest) {
 
     const data = {
       valores,
+      taxa: taxa !== undefined ? taxa : 15.98,
       lastUpdated: new Date().toISOString()
     }
 
