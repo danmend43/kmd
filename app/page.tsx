@@ -35,6 +35,7 @@ interface AccountData {
   number?: string
   cel?: string
   url?: string
+  note?: string
 }
 
 const defaultUrls = [
@@ -236,7 +237,8 @@ export default function Home() {
     url: '',
     number: '',
     cel: '',
-    name: ''
+    name: '',
+    note: ''
   })
   const [historyFiles, setHistoryFiles] = useState<Array<{filename: string, date: string}>>([])
   const [selectedHistory, setSelectedHistory] = useState<string>('')
@@ -2066,6 +2068,16 @@ export default function Home() {
                             ))}
                           </select>
                         </div>
+                        <div>
+                          <label className="block text-sm font-semibold text-slate-700 mb-2">Nota (opcional)</label>
+                          <input
+                            type="text"
+                            value={newAccount.note || ''}
+                            onChange={(e) => setNewAccount({ ...newAccount, note: e.target.value })}
+                            className="input-new"
+                            placeholder="Ex: vendido, reservado, etc."
+                          />
+                        </div>
                       </div>
                       <div className="flex gap-3 mt-6">
                         <button
@@ -2178,6 +2190,9 @@ export default function Home() {
                               ? (newAccount.name && newAccount.name.trim() !== '' ? newAccount.name : 'n/a')
                               : (newAccount.name && newAccount.name.trim() !== '' ? newAccount.name : (existingAccount?.name || 'n/a'))
                             
+                            // Processar note - manter o valor digitado ou vazio
+                            const noteValue = newAccount.note && newAccount.note.trim() !== '' ? newAccount.note.trim() : ''
+                            
                             const accountToSave: AccountData = {
                               ...newAccount,
                               id: finalId,
@@ -2186,7 +2201,8 @@ export default function Home() {
                               url: urlToSave,
                               cel: celValue,
                               name: nameValue,
-                              number: newAccount.number ? newAccount.number.trim() : ''
+                              number: newAccount.number ? newAccount.number.trim() : '',
+                              note: noteValue
                             }
                             
                             if (editingAccountIndex !== null) {
@@ -2233,7 +2249,7 @@ export default function Home() {
                               }
                             }
                             
-                            setNewAccount({ id: '', email: '', password: '', url: '', number: '', cel: '', name: '' })
+                            setNewAccount({ id: '', email: '', password: '', url: '', number: '', cel: '', name: '', note: '' })
                             setShowAddAccount(false)
                             setError(null)
                             setDuplicateAccount(null)
@@ -2247,7 +2263,7 @@ export default function Home() {
                           onClick={() => {
                             setShowAddAccount(false)
                             setEditingAccountIndex(null)
-                            setNewAccount({ id: '', email: '', password: '', url: '', number: '', cel: '', name: '' })
+                            setNewAccount({ id: '', email: '', password: '', url: '', number: '', cel: '', name: '', note: '' })
                             setError(null)
                             setDuplicateAccount(null)
                             setDuplicateAccountProfile(null)
@@ -2341,13 +2357,14 @@ export default function Home() {
                         <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Senha</th>
                         <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Nome</th>
                         <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Cel</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Nota</th>
                         <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Ações</th>
                       </tr>
                     </thead>
                     <tbody>
                       {accounts.length === 0 ? (
                         <tr>
-                          <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
+                          <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
                             Nenhuma conta cadastrada. Clique em "Adicionar Conta" para começar.
                           </td>
                         </tr>
@@ -2444,6 +2461,15 @@ export default function Home() {
                               </td>
                               <td className="px-4 py-3 text-sm text-gray-700">{account.cel || 'N/A'}</td>
                               <td className="px-4 py-3 text-sm">
+                                {account.note ? (
+                                  <span className="inline-block px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-semibold">
+                                    {account.note}
+                                  </span>
+                                ) : (
+                                  <span className="text-gray-400 text-xs">-</span>
+                                )}
+                              </td>
+                              <td className="px-4 py-3 text-sm">
                                 <div className="flex gap-2">
                                   <button
                                     onClick={() => {
@@ -2455,7 +2481,8 @@ export default function Home() {
                                         url: account.url || '',
                                         number: account.number || '',
                                         cel: account.cel || '',
-                                        name: account.name || ''
+                                        name: account.name || '',
+                                        note: account.note || ''
                                       })
                                       setShowAddAccount(true)
                                     }}
