@@ -4,6 +4,8 @@ import { existsSync } from 'fs'
 import path from 'path'
 import { verifyAuth } from '@/lib/auth'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(request: NextRequest) {
   const auth = verifyAuth(request)
   if (!auth.authenticated) {

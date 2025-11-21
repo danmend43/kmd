@@ -3,6 +3,8 @@ import axios from 'axios'
 import * as cheerio from 'cheerio'
 import { verifyAuth } from '@/lib/auth'
 
+export const dynamic = 'force-dynamic'
+
 // Função para validar se um número é válido (não é 0, vazio ou N/A)
 function isValidNumber(value: string | number): boolean {
   if (!value) return false

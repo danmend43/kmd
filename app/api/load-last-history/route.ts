@@ -4,6 +4,8 @@ import { existsSync } from 'fs'
 import path from 'path'
 import { verifyAuth } from '@/lib/auth'
 
+export const dynamic = 'force-dynamic'
+
 // Dados das contas (mesmo do page.tsx)
 const accountData = [
   { email: 'sonicrockeiro@gmail.com', password: 'kwai202022', name: 'sonicrockeiro', followers: '4.5K', verified: true },

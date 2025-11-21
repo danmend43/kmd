@@ -4,6 +4,8 @@ import { existsSync } from 'fs'
 import path from 'path'
 import { verifyAuth } from '@/lib/auth'
 
+export const dynamic = 'force-dynamic'
+
 const postingFilePath = path.join(process.cwd(), 'public', 'daily-posting.json')
 const postingHistoryPath = path.join(process.cwd(), 'public', 'daily-posting-history.json')
 

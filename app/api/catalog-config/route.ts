@@ -5,6 +5,8 @@ import path from 'path'
 import crypto from 'crypto'
 import { verifyAuth } from '@/lib/auth'
 
+export const dynamic = 'force-dynamic'
+
 const configFilePath = path.join(process.cwd(), 'public', 'catalog-config.json')
 const catalogsDir = path.join(process.cwd(), 'public', 'catalogs')
 

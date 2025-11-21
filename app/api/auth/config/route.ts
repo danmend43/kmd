@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
 
+export const dynamic = 'force-dynamic'
+
 // Valores padrão - usar variáveis de ambiente se disponíveis
 const DEFAULT_USERNAME = process.env.AUTH_USERNAME || 'danmend'
 const DEFAULT_PASSWORD = process.env.AUTH_PASSWORD || 'Zshakugan5@'

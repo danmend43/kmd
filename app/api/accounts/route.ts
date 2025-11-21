@@ -4,6 +4,8 @@ import { existsSync } from 'fs'
 import path from 'path'
 import { verifyAuth } from '@/lib/auth'
 
+export const dynamic = 'force-dynamic'
+
 const accountsFilePath = path.join(process.cwd(), 'public', 'accounts-data.json')
 
 // Carregar contas (GET é público para permitir acesso do catálogo público)

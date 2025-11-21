@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+export const dynamic = 'force-dynamic'
+
 // Credenciais simples - usar variáveis de ambiente ou valores padrão
 const AUTH_USERNAME = process.env.AUTH_USERNAME || 'danmend'
 const AUTH_PASSWORD = process.env.AUTH_PASSWORD || 'Zshakugan5@'

@@ -4,6 +4,8 @@ import { existsSync } from 'fs'
 import path from 'path'
 import { verifyAuth } from '@/lib/auth'
 
+export const dynamic = 'force-dynamic'
+
 const urlsFilePath = path.join(process.cwd(), 'public', 'saved-urls.json')
 
 // Carregar URLs salvas

@@ -4,6 +4,8 @@ import { existsSync } from 'fs'
 import path from 'path'
 import { verifyAuth } from '@/lib/auth'
 
+export const dynamic = 'force-dynamic'
+
 const valoresFilePath = path.join(process.cwd(), 'public', 'valores-data.json')
 
 // Carregar valores
