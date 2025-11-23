@@ -128,21 +128,48 @@ export async function POST(request: NextRequest) {
     }
     // Processar addToHistory (se existir e não foi atualizado)
     else if (addToHistory) {
-      // Adicionar ao histórico quando completar
       // Sempre usar a data atual do servidor (timezone local) para evitar problemas
       const now = new Date()
       const todayDate = getTodayDate() // Formato YYYY-MM-DD baseado no timezone local
       
-      // Criar objeto de histórico com a data atual do servidor
-      historyEntry = {
-        date: todayDate, // Sempre usar data atual do servidor (timezone local)
-        startTime: addToHistory.startTime || now.toISOString(),
-        endTime: addToHistory.endTime || now.toISOString(),
-        totalAccounts: addToHistory.totalAccounts || 0,
-        groups: addToHistory.groups || []
-      }
+      // VERIFICAR se já existe histórico para hoje ANTES de criar novo
+      const existingIndex = history.findIndex((item: any) => {
+        if (!item.date) return false
+        // Normalizar data do item (pode estar em formato ISO ou YYYY-MM-DD)
+        const itemDateNormalized = item.date.includes('T') 
+          ? item.date.split('T')[0] 
+          : item.date.split(' ')[0] // Caso tenha hora sem T
+        return itemDateNormalized === todayDate
+      })
       
-      history.unshift(historyEntry)
+      if (existingIndex >= 0) {
+        // ATUALIZAR histórico existente ao invés de criar novo
+        const existing = history[existingIndex]
+        const groups = [...(existing.groups || [])]
+        const newGroup = addToHistory.groups?.[0] // Pegar o primeiro grupo do array
+        if (newGroup && !groups.includes(newGroup)) {
+          groups.push(newGroup)
+        }
+        
+        history[existingIndex] = {
+          ...existing,
+          groups: groups,
+          totalAccounts: (existing.totalAccounts || 0) + (addToHistory.totalAccounts || 0),
+          endTime: addToHistory.endTime || existing.endTime
+        }
+        historyEntry = history[existingIndex]
+      } else {
+        // Criar novo histórico APENAS se não existe nenhum para hoje
+        historyEntry = {
+          date: todayDate, // Sempre usar data atual do servidor (timezone local)
+          startTime: addToHistory.startTime || now.toISOString(),
+          endTime: addToHistory.endTime || now.toISOString(),
+          totalAccounts: addToHistory.totalAccounts || 0,
+          groups: addToHistory.groups || []
+        }
+        
+        history.unshift(historyEntry)
+      }
       
       const historyDir = path.dirname(postingHistoryPath)
       if (!existsSync(historyDir)) {

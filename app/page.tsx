@@ -2437,8 +2437,11 @@ export default function Home() {
                             }
                           }
 
+                          // Verificar se a conta não tem URL do Kwai
+                          const hasNoUrl = !account.url || account.url.trim() === ''
+                          
                           return (
-                            <tr key={index} className="border-b hover:bg-gray-50">
+                            <tr key={index} className={`border-b hover:bg-gray-50 ${hasNoUrl ? 'border-l-4 border-red-500' : ''}`}>
                               <td className="px-4 py-3 text-sm text-gray-700 font-bold font-mono">
                                 {account.id || '-'}
                               </td>
@@ -3543,7 +3546,7 @@ export default function Home() {
                                     return g.replace('custom-', '')
                                   }
                                   return g === 'inicio' ? '< 1k' : g.toUpperCase()
-                                }).join(', ')
+                                }).join(' | ')
                                 
                                 return (
                                   <div
@@ -3792,19 +3795,23 @@ export default function Home() {
                               // Se completou o grupo, adicionar ao histórico e marcar calendário
                               if (isGroupComplete && newGroupData.startTime && newGroupData.endTime) {
                                 try {
-                                  // Verificar se já existe histórico para hoje (buscar pelo primeiro item que pode ter data diferente devido a timezone)
-                                  // Buscar pelo histórico mais recente que pode ser de hoje
+                                  // Normalizar a data de hoje para comparação (YYYY-MM-DD)
                                   const todayDateStr = today
+                                  
+                                  // Buscar histórico existente para hoje - normalizar datas para comparação
                                   const existingHistoryIndex = postingHistory.findIndex(item => {
-                                    // Comparar datas normalizadas (sem hora)
-                                    const itemDate = item.date ? item.date.split('T')[0] : ''
-                                    return itemDate === todayDateStr
+                                    if (!item.date) return false
+                                    // Normalizar data do item (pode estar em formato ISO ou YYYY-MM-DD)
+                                    const itemDateNormalized = item.date.includes('T') 
+                                      ? item.date.split('T')[0] 
+                                      : item.date.split(' ')[0] // Caso tenha hora sem T
+                                    return itemDateNormalized === todayDateStr
                                   })
                                   
                                   let requestBody: any = { postingData: newDailyPosting }
                                   
                                   if (existingHistoryIndex >= 0) {
-                                    // Atualizar histórico existente - adicionar grupo
+                                    // SEMPRE atualizar histórico existente - adicionar grupo
                                     const existing = postingHistory[existingHistoryIndex]
                                     const groups = [...(existing.groups || [])]
                                     if (!groups.includes(dailyPostingGroup)) {
@@ -3818,7 +3825,7 @@ export default function Home() {
                                       endTime: now
                                     }
                                   } else {
-                                    // Criar novo histórico - marcar calendário apenas se ainda não foi marcado hoje
+                                    // Criar novo histórico APENAS se não existe nenhum para hoje
                                     requestBody.addToHistory = {
                                       date: today,
                                       startTime: newGroupData.startTime,
@@ -3859,20 +3866,27 @@ export default function Home() {
                                   if (response.ok) {
                                     const responseData = await response.json()
                                     
-                                    if (requestBody.addToHistory) {
-                                      const historyEntry = responseData.historyEntry || requestBody.addToHistory
-                                      const updatedHistory = [historyEntry, ...postingHistory]
-                                      setPostingHistory(updatedHistory)
-                                    } else if (requestBody.updateHistory) {
-                                      // Usar histórico retornado pela API se disponível
-                                      if (responseData.history) {
-                                        setPostingHistory(responseData.history)
-                                      } else {
-                                        // Atualizar histórico localmente como fallback
+                                    // SEMPRE recarregar o histórico completo do servidor para evitar duplicatas
+                                    // Isso garante que estamos sincronizados com o backend
+                                    try {
+                                      const historyResponse = await fetch('/api/daily-posting')
+                                      if (historyResponse.ok) {
+                                        const historyData = await historyResponse.json()
+                                        if (historyData.history) {
+                                          setPostingHistory(historyData.history)
+                                        }
+                                      }
+                                    } catch (e) {
+                                      console.error('Erro ao recarregar histórico:', e)
+                                      // Fallback: atualizar localmente apenas se necessário
+                                      if (requestBody.updateHistory) {
                                         const updatedHistory = [...postingHistory]
                                         const existingIndex = updatedHistory.findIndex(item => {
-                                          const itemDate = item.date ? item.date.split('T')[0] : ''
-                                          return itemDate === todayDateStr
+                                          if (!item.date) return false
+                                          const itemDateNormalized = item.date.includes('T') 
+                                            ? item.date.split('T')[0] 
+                                            : item.date.split(' ')[0]
+                                          return itemDateNormalized === todayDateStr
                                         })
                                         
                                         if (existingIndex >= 0) {
@@ -3883,15 +3897,6 @@ export default function Home() {
                                             endTime: requestBody.updateHistory.endTime
                                           }
                                           setPostingHistory(updatedHistory)
-                                        } else {
-                                          // Se não encontrou, recarregar do servidor
-                                          const historyResponse = await fetch('/api/daily-posting')
-                                          if (historyResponse.ok) {
-                                            const historyData = await historyResponse.json()
-                                            if (historyData.history) {
-                                              setPostingHistory(historyData.history)
-                                            }
-                                          }
                                         }
                                       }
                                     }
