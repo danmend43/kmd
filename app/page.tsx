@@ -1094,10 +1094,40 @@ export default function Home() {
     if (!editingGroupCover) return
     
     const newGroupCovers = { ...groupCovers }
+    let coverImagePath = ''
     
-    // Se houver imagem, salvar a capa
+    // Se houver imagem, salvar na pasta img
     if (groupCoverImage) {
-      newGroupCovers[editingGroupCover] = groupCoverImage
+      // Verificar se já é um caminho (não base64)
+      if (groupCoverImage.startsWith('/img/') || groupCoverImage.startsWith('http')) {
+        // Já é um caminho, usar diretamente
+        coverImagePath = groupCoverImage
+      } else {
+        // É base64, fazer upload para a pasta img
+        try {
+          const uploadResponse = await fetch('/api/upload-cover', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+              imageBase64: groupCoverImage,
+              groupName: editingGroupCover
+            }),
+          })
+          
+          if (uploadResponse.ok) {
+            const uploadData = await uploadResponse.json()
+            coverImagePath = uploadData.imagePath
+          } else {
+            throw new Error('Erro ao fazer upload da imagem')
+          }
+        } catch (e) {
+          console.error('Erro ao fazer upload da capa:', e)
+          alert('Erro ao salvar a imagem. Tente novamente.')
+          return
+        }
+      }
+      
+      newGroupCovers[editingGroupCover] = coverImagePath
       setGroupCovers(newGroupCovers)
     }
     
@@ -1120,7 +1150,7 @@ export default function Home() {
         if (updatedCustomGroups[oldGroupName]) {
           updatedCustomGroups[newGroupName] = {
             ...updatedCustomGroups[oldGroupName],
-            coverImage: groupCoverImage || updatedCustomGroups[oldGroupName].coverImage || ''
+            coverImage: coverImagePath || updatedCustomGroups[oldGroupName].coverImage || ''
           }
           delete updatedCustomGroups[oldGroupName]
           
@@ -1131,8 +1161,8 @@ export default function Home() {
           }
           
           // Se havia capa sendo salva, atualizar com o novo nome
-          if (groupCoverImage) {
-            newGroupCovers[`custom-${newGroupName}`] = groupCoverImage
+          if (coverImagePath) {
+            newGroupCovers[`custom-${newGroupName}`] = coverImagePath
           }
           
           // Se o grupo estava selecionado, atualizar o selectedGroup
@@ -1144,13 +1174,13 @@ export default function Home() {
         // Nome não mudou, apenas atualizar a capa se houver
         updatedCustomGroups = { ...customGroups }
         if (updatedCustomGroups[oldGroupName]) {
-          if (groupCoverImage) {
-            updatedCustomGroups[oldGroupName].coverImage = groupCoverImage
+          if (coverImagePath) {
+            updatedCustomGroups[oldGroupName].coverImage = coverImagePath
           }
         } else {
           updatedCustomGroups[oldGroupName] = {
             emails: [],
-            coverImage: groupCoverImage || ''
+            coverImage: coverImagePath || ''
           }
         }
       }
@@ -2133,7 +2163,7 @@ export default function Home() {
                                 setError('Este email já está cadastrado!')
                                 return // Não salva
                               }
-                            } else {
+                              } else {
                               // Ao editar, verificar se o email mudou e se já existe em outra conta
                               const emailToCheck = newAccount.email.trim().toLowerCase()
                               const currentAccount = accounts[editingAccountIndex]
@@ -2439,7 +2469,7 @@ export default function Home() {
 
                           // Verificar se a conta não tem URL do Kwai
                           const hasNoUrl = !account.url || account.url.trim() === ''
-                          
+
                           return (
                             <tr key={index} className={`border-b hover:bg-gray-50 ${hasNoUrl ? 'border-l-4 border-red-500' : ''}`}>
                               <td className="px-4 py-3 text-sm text-gray-700 font-bold font-mono">
@@ -2727,7 +2757,7 @@ export default function Home() {
                   <div>
                     <div className="flex items-center justify-between mb-8">
                       <div className="text-center flex-1">
-                        <h3 className="text-xl font-bold text-gray-800 mb-2">Selecione um Grupo</h3>
+                      <h3 className="text-xl font-bold text-gray-800 mb-2">Selecione um Grupo</h3>
                         <p className="text-gray-600">Escolha uma faixa de seguidores ou grupo personalizado para visualizar as contas</p>
                       </div>
                       <button
@@ -2857,8 +2887,8 @@ export default function Home() {
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent"></div>
                                 <div className="absolute bottom-3 left-3 right-3">
                                   <div className="text-2xl font-black text-white drop-shadow-lg">
-                                    {groupName === 'inicio' ? '< 1k' : groupName.toUpperCase()}
-                                  </div>
+                                  {groupName === 'inicio' ? '< 1k' : groupName.toUpperCase()}
+                                </div>
                                 </div>
                                 {/* Botão de editar capa */}
                                 <button
@@ -2881,10 +2911,10 @@ export default function Home() {
                                   <div className="flex items-center justify-center gap-4 mt-2">
                                     <div>
                                       <div className="text-2xl font-bold text-gray-800">
-                                        {accounts.length}
-                                      </div>
+                                  {accounts.length}
+                                </div>
                                       <div className="text-xs text-gray-500 uppercase tracking-wide font-semibold">contas</div>
-                                    </div>
+                                </div>
                                     <div className="w-px h-8 bg-gray-300"></div>
                                     <div>
                                       <div className="text-2xl font-bold text-gray-800">
@@ -3073,7 +3103,7 @@ export default function Home() {
                                   >
                                     👁️ Ver Perfil
                                   </button>
-                                </div>
+                                  </div>
                               )}
                               
                               {/* Botão para remover de grupo personalizado ou mover para outro */}
@@ -3354,11 +3384,56 @@ export default function Home() {
                   
                   // Se não há grupo selecionado, mostrar cards dos grupos
                   if (!dailyPostingGroup) {
+                    // Verificar se "Fazer Tudo" está completo (calcular uma vez)
+                    const allGroupData = todayData.groups['all'] || { selected: [] }
+                    // Coletar todas as contas para verificar se está completo
+                    const allProfiles: ProfileData[] = []
+                    Object.entries(getCustomGroupsWithProfiles()).forEach(([_, accounts]) => {
+                      allProfiles.push(...accounts)
+                    })
+                    Object.entries(groupedAccounts()).forEach(([_, accounts]) => {
+                      allProfiles.push(...accounts)
+                    })
+                    const uniqueAllProfiles = allProfiles.filter((profile, index, self) =>
+                      index === self.findIndex((p) => p.email?.toLowerCase() === profile.email?.toLowerCase())
+                    )
+                    const isAllCompleted = allGroupData.selected.length === uniqueAllProfiles.length && uniqueAllProfiles.length > 0
+                    
                     return (
                       <>
                         <div className="mb-6">
                           <h3 className="text-xl font-bold text-gray-800 mb-4">Selecione um Grupo</h3>
                           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                            {/* Card "Fazer Tudo" */}
+                            <div
+                              onClick={() => !isAllCompleted && setDailyPostingGroup('all')}
+                              className={`group relative bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 rounded-2xl overflow-hidden transition-all duration-300 shadow-lg hover:shadow-2xl border-2 ${
+                                isAllCompleted
+                                  ? 'ring-4 ring-green-400 ring-opacity-60 shadow-green-200 cursor-default'
+                                  : 'border-indigo-400 hover:border-indigo-300 cursor-pointer'
+                              }`}
+                            >
+                              <div className={`relative h-32 flex items-center justify-center ${isAllCompleted ? 'opacity-90' : ''}`}>
+                                <div className="text-center">
+                                  <span className="text-5xl mb-2 block">🚀</span>
+                                  <div className="text-2xl font-black text-white drop-shadow-lg">
+                                    Fazer Tudo
+                                  </div>
+                                </div>
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/10 to-transparent"></div>
+                                {isAllCompleted && (
+                                  <div className="absolute inset-0 bg-green-500/20 backdrop-blur-[1px]"></div>
+                                )}
+                              </div>
+                              
+                              <div className={`p-5 bg-white ${isAllCompleted ? 'bg-gradient-to-b from-green-50/50 to-white' : ''}`}>
+                                <div className="text-center">
+                                  <div className="text-sm font-semibold text-gray-600">
+                                    {isAllCompleted ? '✅ Completo' : 'Todas as contas'}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
                             {/* Grupos Personalizados */}
                             {Object.keys(customGroups).length > 0 && Object.keys(customGroups).map((groupName) => {
                               const accounts = getCustomGroupsWithProfiles()[groupName] || []
@@ -3376,11 +3451,13 @@ export default function Home() {
                               return (
                                   <div
                                     key={`custom-${groupName}`}
-                                    onClick={() => setDailyPostingGroup(`custom-${groupName}`)}
-                                    className={`group relative bg-white rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 shadow-lg hover:shadow-2xl ${
-                                      isGroupCompleted 
-                                        ? 'ring-4 ring-green-400 ring-opacity-60 shadow-green-200' 
-                                        : 'border border-gray-200 hover:border-purple-400'
+                                    onClick={() => !isAllCompleted && setDailyPostingGroup(`custom-${groupName}`)}
+                                    className={`group relative bg-white rounded-2xl overflow-hidden transition-all duration-300 shadow-lg hover:shadow-2xl ${
+                                      isAllCompleted
+                                        ? 'opacity-50 cursor-not-allowed'
+                                        : isGroupCompleted 
+                                          ? 'ring-4 ring-green-400 ring-opacity-60 shadow-green-200 cursor-pointer' 
+                                          : 'border border-gray-200 hover:border-purple-400 cursor-pointer'
                                     }`}
                                   >
                                     {/* Capa do Grupo */}
@@ -3453,11 +3530,13 @@ export default function Home() {
                                 return (
                                   <div
                                     key={groupName}
-                                    onClick={() => setDailyPostingGroup(groupName)}
-                                    className={`group relative bg-white rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 shadow-lg hover:shadow-2xl ${
-                                      isGroupCompleted 
-                                        ? 'ring-4 ring-green-400 ring-opacity-60 shadow-green-200' 
-                                        : 'border border-gray-200 hover:border-purple-400'
+                                    onClick={() => !isAllCompleted && setDailyPostingGroup(groupName)}
+                                    className={`group relative bg-white rounded-2xl overflow-hidden transition-all duration-300 shadow-lg hover:shadow-2xl ${
+                                      isAllCompleted
+                                        ? 'opacity-50 cursor-not-allowed'
+                                        : isGroupCompleted 
+                                          ? 'ring-4 ring-green-400 ring-opacity-60 shadow-green-200 cursor-pointer' 
+                                          : 'border border-gray-200 hover:border-purple-400 cursor-pointer'
                                     }`}
                                   >
                                     {/* Capa do Grupo */}
@@ -3671,7 +3750,28 @@ export default function Home() {
                   let groupProfiles: ProfileData[] = []
                   let groupDisplayName = ''
                   
-                  if (dailyPostingGroup.startsWith('custom-')) {
+                  if (dailyPostingGroup === 'all') {
+                    // "Fazer Tudo" - coletar todas as contas de todos os grupos
+                    const allProfiles: ProfileData[] = []
+                    
+                    // Adicionar contas dos grupos personalizados
+                    Object.entries(getCustomGroupsWithProfiles()).forEach(([_, accounts]) => {
+                      allProfiles.push(...accounts)
+                    })
+                    
+                    // Adicionar contas dos grupos originais
+                    Object.entries(groupedAccounts()).forEach(([_, accounts]) => {
+                      allProfiles.push(...accounts)
+                    })
+                    
+                    // Remover duplicatas por email
+                    const uniqueProfiles = allProfiles.filter((profile, index, self) =>
+                      index === self.findIndex((p) => p.email?.toLowerCase() === profile.email?.toLowerCase())
+                    )
+                    
+                    groupProfiles = uniqueProfiles
+                    groupDisplayName = 'Todas as Contas'
+                  } else if (dailyPostingGroup.startsWith('custom-')) {
                     const groupName = dailyPostingGroup.replace('custom-', '')
                     groupProfiles = getCustomGroupsWithProfiles()[groupName] || []
                     groupDisplayName = groupName
@@ -3681,12 +3781,14 @@ export default function Home() {
                   }
                   
                   // Dados do grupo para hoje
-                  const groupData = todayData.groups[dailyPostingGroup] || { selected: [] }
+                  // Para "all", usar uma chave especial
+                  const groupKey = dailyPostingGroup === 'all' ? 'all' : dailyPostingGroup
+                  const groupData = todayData.groups[groupKey] || { selected: [] }
                   const selectedCount = groupData.selected.length
                   const totalAccounts = groupProfiles.length
                   const isGroupCompleted = selectedCount === totalAccounts && totalAccounts > 0
                   const remaining = totalAccounts - selectedCount
-                  
+
                   return (
                     <>
                       {/* Botão Voltar */}
@@ -3709,10 +3811,10 @@ export default function Home() {
                               Todas as {totalAccounts} contas do grupo <strong>{groupDisplayName}</strong> foram processadas.
                             </p>
                             {groupData.startTime && groupData.endTime && (
-                              <div className="mt-4 text-sm text-green-700">
+                                <div className="mt-4 text-sm text-green-700">
                                 <div>🕐 Início: {new Date(groupData.startTime).toLocaleTimeString('pt-BR')}</div>
                                 <div>🕐 Fim: {new Date(groupData.endTime).toLocaleTimeString('pt-BR')}</div>
-                              </div>
+                                </div>
                             )}
                           </div>
                         </div>
@@ -3773,7 +3875,7 @@ export default function Home() {
                                 ...todayData,
                                 groups: {
                                   ...todayData.groups,
-                                  [dailyPostingGroup]: newGroupData
+                                  [groupKey]: newGroupData
                                 }
                               }
 
@@ -3814,8 +3916,10 @@ export default function Home() {
                                     // SEMPRE atualizar histórico existente - adicionar grupo
                                     const existing = postingHistory[existingHistoryIndex]
                                     const groups = [...(existing.groups || [])]
-                                    if (!groups.includes(dailyPostingGroup)) {
-                                      groups.push(dailyPostingGroup)
+                                    // Para "all", usar "Todas" no histórico
+                                    const historyGroupName = dailyPostingGroup === 'all' ? 'Todas' : dailyPostingGroup
+                                    if (!groups.includes(historyGroupName)) {
+                                      groups.push(historyGroupName)
                                     }
                                     
                                     requestBody.updateHistory = {
@@ -3826,36 +3930,38 @@ export default function Home() {
                                     }
                                   } else {
                                     // Criar novo histórico APENAS se não existe nenhum para hoje
-                                    requestBody.addToHistory = {
-                                      date: today,
+                                    // Para "all", usar "Todas" no histórico
+                                    const historyGroupName = dailyPostingGroup === 'all' ? 'Todas' : dailyPostingGroup
+                                  requestBody.addToHistory = {
+                                    date: today,
                                       startTime: newGroupData.startTime,
                                       endTime: now,
                                       totalAccounts: totalAccounts,
-                                      groups: [dailyPostingGroup]
+                                      groups: [historyGroupName]
                                     }
                                     
                                     // Marcar calendário apenas se ainda não foi marcado hoje
                                     if (!todayData.calendarMarked) {
                                       const newMarkedDays = { ...markedDays, [today]: true }
-                                      setMarkedDays(newMarkedDays)
+                                    setMarkedDays(newMarkedDays)
                                       newTodayData.calendarMarked = true
-                                      
-                                      try {
-                                        await fetch('/api/calendar', {
-                                          method: 'POST',
-                                          headers: {
-                                            'Content-Type': 'application/json',
-                                          },
-                                          body: JSON.stringify({
-                                            markedDays: newMarkedDays,
-                                            sequences: sequences
-                                          }),
-                                        })
-                                      } catch (e) {
-                                        console.error('Erro ao marcar dia no calendário:', e)
-                                      }
+                                    
+                                    try {
+                                      await fetch('/api/calendar', {
+                                        method: 'POST',
+                                        headers: {
+                                          'Content-Type': 'application/json',
+                                        },
+                                        body: JSON.stringify({
+                                          markedDays: newMarkedDays,
+                                          sequences: sequences
+                                        }),
+                                      })
+                                    } catch (e) {
+                                      console.error('Erro ao marcar dia no calendário:', e)
                                     }
                                   }
+                                }
                                   
                                   const response = await fetch('/api/daily-posting', {
                                     method: 'POST',
@@ -3898,11 +4004,11 @@ export default function Home() {
                                           }
                                           setPostingHistory(updatedHistory)
                                         }
-                                      }
                                     }
                                   }
-                                } catch (e) {
-                                  console.error('Erro ao salvar postagens:', e)
+                                }
+                              } catch (e) {
+                                console.error('Erro ao salvar postagens:', e)
                                 }
                               } else {
                                 // Apenas salvar progresso
@@ -3984,7 +4090,7 @@ export default function Home() {
                               }).join(', ')
                               
                               return (
-                                <div
+                                                                <div
                                   key={index}
                                   className="flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-lg"
                                 >
@@ -4003,49 +4109,49 @@ export default function Home() {
                                       {item.totalAccounts} contas
                                     </div>
                                   </div>
-                                  <button
-                                    onClick={async () => {
-                                      const itemToRemove = postingHistory[index]
+                                <button
+                                  onClick={async () => {
+                                    const itemToRemove = postingHistory[index]
+                                    
+                                    try {
+                                      const response = await fetch('/api/daily-posting', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ removeFromHistory: index }),
+                                      })
                                       
-                                      try {
-                                        const response = await fetch('/api/daily-posting', {
-                                          method: 'POST',
-                                          headers: { 'Content-Type': 'application/json' },
-                                          body: JSON.stringify({ removeFromHistory: index }),
-                                        })
+                                      if (response.ok) {
+                                        const newHistory = postingHistory.filter((_, i) => i !== index)
+                                        setPostingHistory(newHistory)
                                         
-                                        if (response.ok) {
-                                          const newHistory = postingHistory.filter((_, i) => i !== index)
-                                          setPostingHistory(newHistory)
-                                          
                                           // Desmarcar calendário e resetar grupos do dia
-                                          if (itemToRemove && itemToRemove.date) {
-                                            const dateToCheck = itemToRemove.date
+                                        if (itemToRemove && itemToRemove.date) {
+                                          const dateToCheck = itemToRemove.date
                                             
                                             // Verificar se há outros itens desse dia
-                                            const hasOtherItemsOnSameDate = newHistory.some(item => item.date === dateToCheck)
-                                            
+                                          const hasOtherItemsOnSameDate = newHistory.some(item => item.date === dateToCheck)
+                                          
                                             // Se não há mais itens desse dia, desmarcar calendário
-                                            if (!hasOtherItemsOnSameDate) {
-                                              const newMarkedDays = { ...markedDays }
-                                              delete newMarkedDays[dateToCheck]
-                                              setMarkedDays(newMarkedDays)
-                                              
-                                              try {
-                                                await fetch('/api/calendar', {
-                                                  method: 'POST',
-                                                  headers: {
-                                                    'Content-Type': 'application/json',
-                                                  },
-                                                  body: JSON.stringify({
-                                                    markedDays: newMarkedDays,
-                                                    sequences: sequences
-                                                  }),
-                                                })
-                                              } catch (e) {
-                                                console.error('Erro ao desmarcar dia no calendário:', e)
-                                              }
+                                          if (!hasOtherItemsOnSameDate) {
+                                            const newMarkedDays = { ...markedDays }
+                                            delete newMarkedDays[dateToCheck]
+                                            setMarkedDays(newMarkedDays)
+                                            
+                                            try {
+                                              await fetch('/api/calendar', {
+                                                method: 'POST',
+                                                headers: {
+                                                  'Content-Type': 'application/json',
+                                                },
+                                                body: JSON.stringify({
+                                                  markedDays: newMarkedDays,
+                                                  sequences: sequences
+                                                }),
+                                              })
+                                            } catch (e) {
+                                              console.error('Erro ao desmarcar dia no calendário:', e)
                                             }
+                                          }
                                             
                                             // Resetar grupos do dia para 0%
                                             const newDailyPosting = { ...dailyPosting }
@@ -4066,33 +4172,33 @@ export default function Home() {
                                           }
                                           
                                           // Recarregar histórico do servidor
-                                          try {
-                                            const historyResponse = await fetch('/api/daily-posting')
-                                            if (historyResponse.ok) {
-                                              const historyData = await historyResponse.json()
-                                              if (historyData.history) {
-                                                setPostingHistory(historyData.history)
-                                              }
-                                              if (historyData.postingData) {
-                                                setDailyPosting(historyData.postingData)
-                                              }
+                                        try {
+                                          const historyResponse = await fetch('/api/daily-posting')
+                                          if (historyResponse.ok) {
+                                            const historyData = await historyResponse.json()
+                                            if (historyData.history) {
+                                              setPostingHistory(historyData.history)
                                             }
-                                          } catch (e) {
-                                            console.error('Erro ao recarregar histórico:', e)
+                                            if (historyData.postingData) {
+                                              setDailyPosting(historyData.postingData)
+                                            }
                                           }
-                                        } else {
-                                          alert('Erro ao remover item do histórico. Tente novamente.')
+                                        } catch (e) {
+                                          console.error('Erro ao recarregar histórico:', e)
                                         }
-                                      } catch (e) {
-                                        console.error('Erro ao remover do histórico:', e)
+                                      } else {
                                         alert('Erro ao remover item do histórico. Tente novamente.')
                                       }
-                                    }}
-                                    className="px-3 py-1 bg-red-500 text-white text-sm font-semibold rounded hover:bg-red-600 transition-all"
-                                  >
-                                    🗑️ Remover
-                                  </button>
-                                </div>
+                                    } catch (e) {
+                                      console.error('Erro ao remover do histórico:', e)
+                                      alert('Erro ao remover item do histórico. Tente novamente.')
+                                    }
+                                  }}
+                                  className="px-3 py-1 bg-red-500 text-white text-sm font-semibold rounded hover:bg-red-600 transition-all"
+                                >
+                                  🗑️ Remover
+                                </button>
+                              </div>
                               )
                             })}
                           </div>

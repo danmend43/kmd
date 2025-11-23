@@ -1,6 +1,14 @@
 {
   "accountGroups": {},
   "customGroups": {},
-  "groupCovers": {},
-  "lastUpdated": "2025-11-23T08:00:14.719Z"
+  "groupCovers": {
+    "16k": "/img/group-cover-16k-1763926742011.png",
+    "5k": "/img/group-cover-5k-1763926764231.jpeg",
+    "inicio": "/img/group-cover-inicio-1763926757778.jpeg",
+    "6k": "/img/group-cover-6k-1763926774552.jpeg",
+    "8k": "/img/group-cover-8k-1763926782178.jpeg",
+    "7k": "/img/group-cover-7k-1763927109876.jpeg",
+    "9k": "/img/group-cover-9k-1763927123367.jpeg"
+  },
+  "lastUpdated": "2025-11-23T19:45:23.402Z"
 }
