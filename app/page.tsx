@@ -36,6 +36,7 @@ interface AccountData {
   cel?: string
   url?: string
   note?: string
+  hidden?: boolean // Conta oculta da postagem do dia
 }
 
 const defaultUrls = [
@@ -238,7 +239,8 @@ export default function Home() {
     number: '',
     cel: '',
     name: '',
-    note: ''
+    note: '',
+    hidden: false
   })
   const [historyFiles, setHistoryFiles] = useState<Array<{filename: string, date: string}>>([])
   const [selectedHistory, setSelectedHistory] = useState<string>('')
@@ -249,10 +251,11 @@ export default function Home() {
   const [taxa, setTaxa] = useState<number>(15.98) // Taxa em porcentagem
   const [urlsOriginal, setUrlsOriginal] = useState<string[]>([]) // URLs originais para reiniciar
   const [urlsProcessed, setUrlsProcessed] = useState<Set<number>>(new Set()) // Índices das URLs processadas
-  const [customGroups, setCustomGroups] = useState<{ [groupName: string]: { emails: string[], coverImage?: string } }>({}) // { "meta": { emails: ["email1"], coverImage: "url" } }
+  const [customGroups, setCustomGroups] = useState<{ [groupName: string]: { emails: string[], coverImage?: string, goal?: number } }>({}) // { "meta": { emails: ["email1"], coverImage: "url", goal: 100000 } }
   const [accountGroups, setAccountGroups] = useState<{ [email: string]: string }>({}) // { "email": "nomeDoGrupo" }
   const [showCreateGroupModal, setShowCreateGroupModal] = useState(false)
   const [newGroupName, setNewGroupName] = useState('')
+  const [newGroupGoal, setNewGroupGoal] = useState<number>(10000) // Meta padrão: 10k
   const [pendingMoveEmail, setPendingMoveEmail] = useState<string | null>(null) // Email da conta que será movida após criar grupo
   const [editingGroupCover, setEditingGroupCover] = useState<string | null>(null) // Nome do grupo sendo editado (pode ser custom- ou grupo original)
   const [groupCoverImage, setGroupCoverImage] = useState<string>('') // Base64 da imagem
@@ -426,9 +429,12 @@ export default function Home() {
             const accountsWithIds = data.accounts.map((acc: AccountData) => {
               if (acc.id) {
                 existingIds.add(acc.id)
-                return acc
               }
-              return acc
+              // Garantir que o campo hidden seja preservado
+              return {
+                ...acc,
+                hidden: acc.hidden !== undefined ? acc.hidden : false
+              }
             })
             
             // Gerar IDs no formato kw+numero (kw1, kw2, kw3...) para contas sem ID, garantindo que sejam únicos
@@ -442,9 +448,16 @@ export default function Home() {
                 } while (existingIds.has(newId))
                 
                 existingIds.add(newId)
-                return { ...acc, id: newId }
+                return { 
+                  ...acc, 
+                  id: newId,
+                  hidden: acc.hidden !== undefined ? acc.hidden : false
+                }
               }
-              return acc
+              return {
+                ...acc,
+                hidden: acc.hidden !== undefined ? acc.hidden : false
+              }
             })
             
             setAccounts(finalAccounts)
@@ -751,17 +764,18 @@ export default function Home() {
             const data = await response.json()
             if (data.customGroups) {
               // Converter estrutura antiga para nova se necessário
-              const convertedGroups: { [key: string]: { emails: string[], coverImage?: string } } = {}
+              const convertedGroups: { [key: string]: { emails: string[], coverImage?: string, goal?: number } } = {}
               Object.keys(data.customGroups).forEach(groupName => {
                 const groupData = data.customGroups[groupName]
                 if (Array.isArray(groupData)) {
                   // Estrutura antiga: array de emails
-                  convertedGroups[groupName] = { emails: groupData, coverImage: '' }
+                  convertedGroups[groupName] = { emails: groupData, coverImage: '', goal: undefined }
                 } else {
-                  // Estrutura nova: objeto com emails e coverImage
+                  // Estrutura nova: objeto com emails, coverImage e goal
                   convertedGroups[groupName] = {
                     emails: groupData.emails || [],
-                    coverImage: groupData.coverImage || ''
+                    coverImage: groupData.coverImage || '',
+                    goal: groupData.goal || undefined
                   }
                 }
               })
@@ -862,6 +876,14 @@ export default function Home() {
     })
     
     return groups
+  }
+
+  // Verificar se uma conta está oculta
+  const isAccountHidden = (email: string): boolean => {
+    const account = accounts.find(acc => 
+      (acc.email || '').toLowerCase() === (email || '').toLowerCase()
+    )
+    return account?.hidden || false
   }
 
   // Obter grupos personalizados com perfis
@@ -1065,7 +1087,8 @@ export default function Home() {
       if (updatedEmails.length !== groupData.emails.length) {
         newCustomGroups[groupName] = {
           ...groupData,
-          emails: updatedEmails
+          emails: updatedEmails,
+          goal: groupData.goal || undefined
         }
         hasChanges = true
       }
@@ -1150,7 +1173,8 @@ export default function Home() {
         if (updatedCustomGroups[oldGroupName]) {
           updatedCustomGroups[newGroupName] = {
             ...updatedCustomGroups[oldGroupName],
-            coverImage: coverImagePath || updatedCustomGroups[oldGroupName].coverImage || ''
+            coverImage: coverImagePath || updatedCustomGroups[oldGroupName].coverImage || '',
+            goal: updatedCustomGroups[oldGroupName].goal || undefined
           }
           delete updatedCustomGroups[oldGroupName]
           
@@ -1180,7 +1204,8 @@ export default function Home() {
         } else {
           updatedCustomGroups[oldGroupName] = {
             emails: [],
-            coverImage: coverImagePath || ''
+            coverImage: coverImagePath || '',
+            goal: undefined
           }
         }
       }
@@ -1223,7 +1248,7 @@ export default function Home() {
     // Criar novo grupo
     const newCustomGroups = {
       ...customGroups,
-      [groupName]: { emails: [], coverImage: '' }
+      [groupName]: { emails: [], coverImage: '', goal: newGroupGoal }
     }
     
     // Se há uma conta pendente para mover, adicionar ao novo grupo
@@ -1243,6 +1268,7 @@ export default function Home() {
     setCustomGroups(newCustomGroups)
     setShowCreateGroupModal(false)
     setNewGroupName('')
+    setNewGroupGoal(10000) // Reset para padrão
     setPendingMoveEmail(null)
     
     // Salvar no servidor
@@ -2232,7 +2258,8 @@ export default function Home() {
                               cel: celValue,
                               name: nameValue,
                               number: newAccount.number ? newAccount.number.trim() : '',
-                              note: noteValue
+                              note: noteValue,
+                              hidden: newAccount.hidden !== undefined ? newAccount.hidden : (existingAccount?.hidden !== undefined ? existingAccount.hidden : false)
                             }
                             
                             if (editingAccountIndex !== null) {
@@ -2469,9 +2496,42 @@ export default function Home() {
 
                           // Verificar se a conta não tem URL do Kwai
                           const hasNoUrl = !account.url || account.url.trim() === ''
+                          const isHidden = account.hidden || false
+
+                          // Função para toggle do estado hidden
+                          const handleToggleHidden = async () => {
+                            const updatedAccounts = accounts.map((acc, i) => {
+                              if (i === index) {
+                                return {
+                                  ...acc,
+                                  hidden: !(acc.hidden || false)
+                                }
+                              }
+                              return {
+                                ...acc,
+                                hidden: acc.hidden !== undefined ? acc.hidden : false
+                              }
+                            })
+                            setAccounts(updatedAccounts)
+                            
+                            // Salvar no servidor
+                            try {
+                              const response = await fetch('/api/accounts', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ accounts: updatedAccounts }),
+                              })
+                              if (!response.ok) {
+                                console.error('Erro ao salvar contas:', await response.text())
+                              }
+                            } catch (e) {
+                              console.error('Erro ao salvar contas:', e)
+                              alert('Erro ao salvar. Tente novamente.')
+                            }
+                          }
 
                           return (
-                            <tr key={index} className={`border-b hover:bg-gray-50 ${hasNoUrl ? 'border-l-4 border-red-500' : ''}`}>
+                            <tr key={index} className={`border-b hover:bg-gray-50 ${hasNoUrl ? 'border-l-4 border-red-500' : ''} ${isHidden ? 'opacity-50 border-2 border-yellow-400' : ''}`}>
                               <td className="px-4 py-3 text-sm text-gray-700 font-bold font-mono">
                                 {account.id || '-'}
                               </td>
@@ -2503,7 +2563,18 @@ export default function Home() {
                                 )}
                               </td>
                               <td className="px-4 py-3 text-sm">
-                                <div className="flex gap-2">
+                                <div className="flex gap-2 items-center">
+                                  <button
+                                    onClick={handleToggleHidden}
+                                    className={`p-2 rounded transition-colors ${
+                                      isHidden 
+                                        ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200' 
+                                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                    }`}
+                                    title={isHidden ? 'Mostrar na postagem do dia' : 'Ocultar da postagem do dia'}
+                                  >
+                                    👁️
+                                  </button>
                                   <button
                                     onClick={() => {
                                       setEditingAccountIndex(index)
@@ -2515,7 +2586,8 @@ export default function Home() {
                                         number: account.number || '',
                                         cel: account.cel || '',
                                         name: account.name || '',
-                                        note: account.note || ''
+                                        note: account.note || '',
+                                        hidden: account.hidden || false
                                       })
                                       setShowAddAccount(true)
                                     }}
@@ -2772,20 +2844,36 @@ export default function Home() {
                       {/* Grupos Personalizados */}
                       {Object.entries(getCustomGroupsWithProfiles())
                         .map(([groupName, accounts]) => {
+                          const groupData = customGroups[groupName]
+                          const goal = groupData?.goal || 0
+                          
+                          // Calcular progresso da meta
+                          const accountsReachedGoal = goal > 0 
+                            ? accounts.filter(acc => {
+                                const followers = parseFollowers(acc.followers || '0')
+                                return followers >= goal
+                              }).length
+                            : 0
+                          const progressPercentage = goal > 0 && accounts.length > 0
+                            ? (accountsReachedGoal / accounts.length) * 100
+                            : 0
+                          const isGoalReached = goal > 0 && accounts.length > 0 && accountsReachedGoal === accounts.length
+                          
                           const totalFollowers = accounts.reduce((sum, acc) => {
                             return sum + parseFollowers(acc.followers || '0')
                           }, 0)
-                          const groupData = customGroups[groupName]
                           const coverImage = groupCovers[`custom-${groupName}`] || groupData?.coverImage || ''
                           
                           return (
                             <div
                               key={`custom-${groupName}`}
-                              className="group relative bg-white rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 shadow-lg hover:shadow-2xl border border-gray-200 hover:border-purple-400"
+                              className={`group relative bg-white rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 shadow-lg hover:shadow-2xl border border-gray-200 hover:border-purple-400 ${
+                                isGoalReached ? 'ring-4 ring-green-400 ring-opacity-60 shadow-green-200' : ''
+                              }`}
                               onClick={() => setSelectedGroup(`custom-${groupName}`)}
                             >
                               {/* Capa do Grupo */}
-                              <div className="relative h-32 bg-gradient-to-br from-purple-500 via-pink-500 to-purple-600 overflow-hidden">
+                              <div className={`relative h-32 bg-gradient-to-br from-purple-500 via-pink-500 to-purple-600 overflow-hidden ${isGoalReached ? 'opacity-90' : ''}`}>
                                 {coverImage ? (
                                   <img 
                                     src={coverImage} 
@@ -2802,6 +2890,9 @@ export default function Home() {
                                 )}
                                 {/* Overlay com gradiente */}
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent"></div>
+                                {isGoalReached && (
+                                  <div className="absolute inset-0 bg-green-500/20 backdrop-blur-[1px]"></div>
+                                )}
                                 {/* Botão de editar capa */}
                                  <button
                                    onClick={(e) => {
@@ -2819,11 +2910,31 @@ export default function Home() {
                               </div>
                               
                               {/* Conteúdo do Card */}
-                              <div className="p-5">
+                              <div className={`p-5 ${isGoalReached ? 'bg-gradient-to-b from-green-50/50 to-white' : ''}`}>
                                 <div className="text-center">
                                   <h3 className="text-xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-2">
                                     {groupName}
                                   </h3>
+                                  {goal > 0 && (
+                                    <div className="mb-3">
+                                      <div className="flex items-center justify-between text-xs text-gray-600 mb-1">
+                                        <span>Meta: {goal >= 1000000 ? `${(goal / 1000000).toFixed(1)}M` : `${goal / 1000}K`}</span>
+                                        <span className={isGoalReached ? 'text-green-600 font-bold' : ''}>
+                                          {accountsReachedGoal}/{accounts.length}
+                                        </span>
+                                      </div>
+                                      <div className="w-full bg-gray-200 rounded-full h-2">
+                                        <div
+                                          className={`h-2 rounded-full transition-all duration-300 ${
+                                            isGoalReached 
+                                              ? 'bg-gradient-to-r from-green-500 to-green-600' 
+                                              : 'bg-gradient-to-r from-purple-500 to-pink-500'
+                                          }`}
+                                          style={{ width: `${Math.min(progressPercentage, 100)}%` }}
+                                        ></div>
+                                      </div>
+                                    </div>
+                                  )}
                                   <div className="flex items-center justify-center gap-4 mt-3">
                                     <div>
                                       <div className="text-2xl font-bold text-gray-800">
@@ -3019,11 +3130,16 @@ export default function Home() {
                         
                         const kwaiUrl = getKwaiUrl()
                         const displayName = cleanDisplayName(profile.displayName || profile.name || profile.username || profile.email || 'N/A')
+                        const isHidden = isAccountHidden(profile.email || '')
                         
                         return (
                           <div
                             key={index}
-                            className="group bg-white rounded-2xl p-6 border-2 border-gray-200 transition-all duration-200"
+                            className={`group bg-white rounded-2xl p-6 border-2 transition-all duration-200 ${
+                              isHidden 
+                                ? 'border-yellow-400 bg-yellow-50/30' 
+                                : 'border-gray-200'
+                            }`}
                           >
                             <div className="space-y-4">
                               {/* Avatar e Nome */}
@@ -3032,21 +3148,32 @@ export default function Home() {
                                   <img
                                     src={profile.avatar}
                                     alt={displayName}
-                                    className="w-20 h-20 rounded-2xl border-[3px] border-purple-400 object-cover flex-shrink-0 shadow-lg"
+                                    className={`w-20 h-20 rounded-2xl border-[3px] object-cover flex-shrink-0 shadow-lg ${
+                                      isHidden ? 'border-yellow-400' : 'border-purple-400'
+                                    }`}
                                     onError={(e) => {
                                       e.currentTarget.style.display = 'none'
                                     }}
                                   />
                                 ) : (
-                                  <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-purple-400 to-pink-400 border-[3px] border-purple-400 flex items-center justify-center flex-shrink-0 shadow-lg">
+                                  <div className={`w-20 h-20 rounded-2xl bg-gradient-to-br border-[3px] flex items-center justify-center flex-shrink-0 shadow-lg ${
+                                    isHidden 
+                                      ? 'from-yellow-400 to-yellow-500 border-yellow-400' 
+                                      : 'from-purple-400 to-pink-400 border-purple-400'
+                                  }`}>
                                     <span className="text-3xl text-white font-bold">
                                       {displayName[0]?.toUpperCase() || '?'}
                                     </span>
                                   </div>
                                 )}
                                 <div className="flex-1 min-w-0">
-                                  <div className="font-bold text-gray-800 truncate text-lg mb-1">
-                                    {displayName}
+                                  <div className="flex items-center gap-2">
+                                    <div className="font-bold text-gray-800 truncate text-lg mb-1">
+                                      {displayName}
+                                    </div>
+                                    {isHidden && (
+                                      <span className="text-yellow-600 text-sm" title="Oculta da postagem do dia">👁️</span>
+                                    )}
                                   </div>
                                   {profile.username && (
                                     <div className="text-xs text-gray-500 truncate">
@@ -3253,6 +3380,27 @@ export default function Home() {
                         }}
                         autoFocus
                       />
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Meta de Seguidores
+                      </label>
+                      <select
+                        value={newGroupGoal}
+                        onChange={(e) => setNewGroupGoal(Number(e.target.value))}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 mb-4"
+                      >
+                        {/* De 10k até 100k de 10 em 10 */}
+                        {Array.from({ length: 10 }, (_, i) => (i + 1) * 10000).map((value) => (
+                          <option key={value} value={value}>
+                            {value >= 1000 ? `${value / 1000}K` : value}
+                          </option>
+                        ))}
+                        {/* De 200k até 1M de 100 em 100 */}
+                        {Array.from({ length: 9 }, (_, i) => (i + 2) * 100000).map((value) => (
+                          <option key={value} value={value}>
+                            {value >= 1000000 ? `${value / 1000000}M` : `${value / 1000}K`}
+                          </option>
+                        ))}
+                      </select>
                       <div className="flex gap-3">
                         <button
                           onClick={handleCreateGroup}
@@ -3265,6 +3413,7 @@ export default function Home() {
                           onClick={() => {
                             setShowCreateGroupModal(false)
                             setNewGroupName('')
+                            setNewGroupGoal(10000)
                             setPendingMoveEmail(null)
                           }}
                           className="flex-1 px-4 py-2 bg-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-400 transition-all"
@@ -3436,11 +3585,33 @@ export default function Home() {
                             </div>
                             {/* Grupos Personalizados */}
                             {Object.keys(customGroups).length > 0 && Object.keys(customGroups).map((groupName) => {
-                              const accounts = getCustomGroupsWithProfiles()[groupName] || []
-                              const totalFollowers = accounts.reduce((sum, acc) => {
+                              const allAccounts = getCustomGroupsWithProfiles()[groupName] || []
+                              const groupData = customGroups[groupName]
+                              const goal = groupData?.goal || 0
+                              
+                              // Filtrar contas que já alcançaram a meta
+                              const accounts = goal > 0 
+                                ? allAccounts.filter(acc => {
+                                    const followers = parseFollowers(acc.followers || '0')
+                                    return followers < goal
+                                  })
+                                : allAccounts
+                              
+                              // Calcular progresso da meta
+                              const accountsReachedGoal = goal > 0 
+                                ? allAccounts.filter(acc => {
+                                    const followers = parseFollowers(acc.followers || '0')
+                                    return followers >= goal
+                                  }).length
+                                : 0
+                              const progressPercentage = goal > 0 && allAccounts.length > 0
+                                ? (accountsReachedGoal / allAccounts.length) * 100
+                                : 0
+                              const isGoalReached = goal > 0 && allAccounts.length > 0 && accountsReachedGoal === allAccounts.length
+                              
+                              const totalFollowers = allAccounts.reduce((sum, acc) => {
                                 return sum + parseFollowers(acc.followers || '0')
                               }, 0)
-                              const groupData = customGroups[groupName]
                               const coverImage = groupCovers[`custom-${groupName}`] || groupData?.coverImage || ''
                               
                               // Verificar se o grupo está completo
@@ -3461,7 +3632,7 @@ export default function Home() {
                                     }`}
                                   >
                                     {/* Capa do Grupo */}
-                                    <div className={`relative h-32 bg-gradient-to-br from-purple-500 via-pink-500 to-purple-600 overflow-hidden ${isGroupCompleted ? 'opacity-90' : ''}`}>
+                                    <div className={`relative h-32 bg-gradient-to-br from-purple-500 via-pink-500 to-purple-600 overflow-hidden ${isGroupCompleted || isGoalReached ? 'opacity-90' : ''}`}>
                                       {coverImage ? (
                                         <img 
                                           src={coverImage} 
@@ -3477,13 +3648,13 @@ export default function Home() {
                                         </div>
                                       )}
                                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent"></div>
-                                      {isGroupCompleted && (
+                                      {(isGroupCompleted || isGoalReached) && (
                                         <div className="absolute inset-0 bg-green-500/20 backdrop-blur-[1px]"></div>
                                       )}
                                     </div>
                                     
                                     {/* Conteúdo do Card */}
-                                    <div className={`p-5 ${isGroupCompleted ? 'bg-gradient-to-b from-green-50/50 to-white' : ''}`}>
+                                    <div className={`p-5 ${isGroupCompleted || isGoalReached ? 'bg-gradient-to-b from-green-50/50 to-white' : ''}`}>
                                       <div className="text-center">
                                         <h3 className="text-xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-2">
                                           {groupName}
@@ -3769,14 +3940,33 @@ export default function Home() {
                       index === self.findIndex((p) => p.email?.toLowerCase() === profile.email?.toLowerCase())
                     )
                     
-                    groupProfiles = uniqueProfiles
+                    // Filtrar contas ocultas da postagem do dia
+                    groupProfiles = uniqueProfiles.filter(profile => !isAccountHidden(profile.email || ''))
                     groupDisplayName = 'Todas as Contas'
                   } else if (dailyPostingGroup.startsWith('custom-')) {
                     const groupName = dailyPostingGroup.replace('custom-', '')
-                    groupProfiles = getCustomGroupsWithProfiles()[groupName] || []
+                    const allGroupProfiles = getCustomGroupsWithProfiles()[groupName] || []
+                    const groupData = customGroups[groupName]
+                    const goal = groupData?.goal || 0
+                    
+                    // Filtrar contas que já alcançaram a meta
+                    if (goal > 0) {
+                      groupProfiles = allGroupProfiles.filter(profile => {
+                        const followers = parseFollowers(profile.followers || '0')
+                        return followers < goal
+                      })
+                    } else {
+                      groupProfiles = allGroupProfiles
+                    }
+                    
+                    // Filtrar contas ocultas da postagem do dia
+                    groupProfiles = groupProfiles.filter(profile => !isAccountHidden(profile.email || ''))
+                    
                     groupDisplayName = groupName
                   } else {
-                    groupProfiles = groupedAccounts()[dailyPostingGroup] || []
+                    const allGroupProfiles = groupedAccounts()[dailyPostingGroup] || []
+                    // Filtrar contas ocultas da postagem do dia
+                    groupProfiles = allGroupProfiles.filter(profile => !isAccountHidden(profile.email || ''))
                     groupDisplayName = dailyPostingGroup === 'inicio' ? '< 1k' : dailyPostingGroup.toUpperCase()
                   }
                   
@@ -3854,7 +4044,30 @@ export default function Home() {
                           groupProfiles
                             .filter((profile) => !groupData.selected.includes(profile.email?.toLowerCase() || ''))
                             .map((profile, index) => {
-                            const accountProfile = profiles.find(p => p.email === profile.email) || historyProfiles.find(p => p.email === profile.email) || profile
+                            // Buscar perfil correspondente - tentar por email primeiro, depois por nome
+                            const accountProfile = profiles.find(p => 
+                              (p.email && profile.email && p.email.toLowerCase() === profile.email.toLowerCase()) ||
+                              (!profile.email && p.name && profile.name && p.name.toLowerCase() === profile.name.toLowerCase()) ||
+                              (!profile.email && p.displayName && profile.displayName && p.displayName.toLowerCase() === profile.displayName.toLowerCase())
+                            ) || historyProfiles.find(p => 
+                              (p.email && profile.email && p.email.toLowerCase() === profile.email.toLowerCase()) ||
+                              (!profile.email && p.name && profile.name && p.name.toLowerCase() === profile.name.toLowerCase()) ||
+                              (!profile.email && p.displayName && profile.displayName && p.displayName.toLowerCase() === profile.displayName.toLowerCase())
+                            ) || profile
+                            
+                            // Se o perfil não tem email, tentar buscar na lista de contas cadastradas
+                            const accountEmail = profile.email || (accountProfile?.email) || (() => {
+                              // Buscar conta por nome se não tiver email
+                              if (profile.name || profile.displayName) {
+                                const matchingAccount = accounts.find(acc => {
+                                  const accName = (acc.name || '').toLowerCase().trim()
+                                  const profileName = (profile.name || profile.displayName || '').toLowerCase().trim()
+                                  return accName && profileName && accName === profileName
+                                })
+                                return matchingAccount?.email || ''
+                              }
+                              return ''
+                            })()
                             
                             const handleClick = async () => {
                               if (isGroupCompleted) return
@@ -4050,10 +4263,10 @@ export default function Home() {
                                 </div>
                                 <div className="flex-1 min-w-0">
                                   <div className="font-semibold text-gray-800 truncate">
-                                    {cleanDisplayName(profile.name || profile.displayName || profile.email || 'N/A')}
+                                    {cleanDisplayName(profile.name || profile.displayName || profile.email || profile.username || 'N/A')}
                                   </div>
                                   <div className="text-sm text-gray-600 truncate">
-                                    {profile.email}
+                                    {accountEmail || profile.email || (profile.username ? `@${profile.username}` : 'Sem email')}
                                   </div>
                                 </div>
                               </div>

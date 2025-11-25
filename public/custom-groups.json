@@ -1,6 +1,27 @@
 {
   "accountGroups": {},
-  "customGroups": {},
+  "customGroups": {
+    "1k de Seguidores": {
+      "emails": [
+        "sonantmen@bangban.uk",
+        "egglogjug670@merry.pink",
+        "taxspatry@ponp.be",
+        "hithim707@honeys.be",
+        "teelaygig@hamham.uk",
+        "rodtub644@instaddr.ch",
+        "furownpie@instaddr.win",
+        "guttan771@risu.be",
+        "rimseatap@usako.net",
+        "maywhymad@instaddr.uk",
+        "kitcat370@instaddr.win",
+        "wagred175@bangban.uk",
+        "hammudgap@macr2.com",
+        "zooripdip@svk.jp"
+      ],
+      "coverImage": "",
+      "goal": 10000
+    }
+  },
   "groupCovers": {
     "16k": "/img/group-cover-16k-1763926742011.png",
     "5k": "/img/group-cover-5k-1763926764231.jpeg",
@@ -10,5 +31,5 @@
     "7k": "/img/group-cover-7k-1763927109876.jpeg",
     "9k": "/img/group-cover-9k-1763927123367.jpeg"
   },
-  "lastUpdated": "2025-11-23T19:45:23.402Z"
+  "lastUpdated": "2025-11-24T23:53:51.138Z"
 }
