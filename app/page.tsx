@@ -2306,7 +2306,7 @@ export default function Home() {
                               }
                             }
                             
-                            setNewAccount({ id: '', email: '', password: '', url: '', number: '', cel: '', name: '', note: '' })
+                            setNewAccount({ id: '', email: '', password: '', url: '', number: '', cel: '', name: '', note: '', hidden: false })
                             setShowAddAccount(false)
                             setError(null)
                             setDuplicateAccount(null)
@@ -2320,7 +2320,7 @@ export default function Home() {
                           onClick={() => {
                             setShowAddAccount(false)
                             setEditingAccountIndex(null)
-                            setNewAccount({ id: '', email: '', password: '', url: '', number: '', cel: '', name: '', note: '' })
+                            setNewAccount({ id: '', email: '', password: '', url: '', number: '', cel: '', name: '', note: '', hidden: false })
                             setError(null)
                             setDuplicateAccount(null)
                             setDuplicateAccountProfile(null)
