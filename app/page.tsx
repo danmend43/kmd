@@ -921,7 +921,9 @@ export default function Home() {
     Object.keys(groups).forEach(groupName => {
       const accountCount = groups[groupName].length
       const valuePerAccount = valores[groupName] || 0
-      const valorComTaxa = valuePerAccount * (1 + taxa / 100) // Valor base + taxa
+      // Valor que precisa cobrar para receber o valor base após a taxa
+      // Se ele quer receber X e a taxa é T%, ele precisa cobrar: X / (1 - T/100)
+      const valorComTaxa = taxa > 0 ? valuePerAccount / (1 - taxa / 100) : valuePerAccount
       totalOriginal += accountCount * valuePerAccount
       totalFinal += accountCount * valorComTaxa
     })
@@ -4670,8 +4672,9 @@ export default function Home() {
                           const accountCount = groups[groupName].length
                           const currentValue = valores[groupName] || 0
                           
-                          // Valor por unidade com taxa aplicada (valor base + taxa)
-                          const valorPorUnidade = currentValue * (1 + taxa / 100)
+                          // Valor por unidade com taxa aplicada (valor que precisa cobrar para receber o valor base)
+                          // Se ele quer receber X e a taxa é T%, ele precisa cobrar: X / (1 - T/100)
+                          const valorPorUnidade = taxa > 0 ? currentValue / (1 - taxa / 100) : currentValue
                           // Valor total do grupo (com taxa)
                           const valorTotalGrupo = valorPorUnidade * accountCount
                           // Valor que ele ganha (sem taxa) - valor base total
