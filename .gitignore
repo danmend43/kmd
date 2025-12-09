@@ -4,5 +4,7 @@ public/css/styles.css
 *.log
 .DS_Store
 auth-config.json
+/.next
+
 
 
