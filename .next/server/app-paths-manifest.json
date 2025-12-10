@@ -1,7 +1,7 @@
 {
   "/login/page": "app/login/page.js",
-  "/api/urls/route": "app/api/urls/route.js",
   "/api/accounts/route": "app/api/accounts/route.js",
   "/api/analyze/route": "app/api/analyze/route.js",
+  "/api/save-history/route": "app/api/save-history/route.js",
   "/page": "app/page.js"
 }
