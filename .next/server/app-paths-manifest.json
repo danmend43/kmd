@@ -1,16 +1,12 @@
 {
-  "/_not-found/page": "app/_not-found/page.js",
-  "/login/page": "app/login/page.js",
-  "/api/auth/verify/route": "app/api/auth/verify/route.js",
-  "/api/auth/login/route": "app/api/auth/login/route.js",
-  "/api/load-last-history/route": "app/api/load-last-history/route.js",
-  "/page": "app/page.js",
+  "/api/calendar/route": "app/api/calendar/route.js",
   "/api/history/list/route": "app/api/history/list/route.js",
   "/api/urls/route": "app/api/urls/route.js",
-  "/api/calendar/route": "app/api/calendar/route.js",
+  "/page": "app/page.js",
   "/api/accounts/route": "app/api/accounts/route.js",
   "/api/daily-posting/route": "app/api/daily-posting/route.js",
-  "/api/catalog-config/route": "app/api/catalog-config/route.js",
+  "/api/load-last-history/route": "app/api/load-last-history/route.js",
   "/api/valores/route": "app/api/valores/route.js",
+  "/api/catalog-config/route": "app/api/catalog-config/route.js",
   "/api/history/load/route": "app/api/history/load/route.js"
 }
