@@ -1,4 +1,4 @@
-// File: C:\Users\danie\Desktop\kwai\app\layout.tsx
+// File: C:\Users\danie\Desktop\projetos\kwai\app\layout.tsx
 import * as entry from '../../../app/layout.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

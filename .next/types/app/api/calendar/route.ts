@@ -1,4 +1,4 @@
-// File: C:\Users\danie\Desktop\kwai\app\api\calendar\route.ts
+// File: C:\Users\danie\Desktop\projetos\kwai\app\api\calendar\route.ts
 import * as entry from '../../../../../app/api/calendar/route.js'
 import type { NextRequest } from 'next/server.js'
 

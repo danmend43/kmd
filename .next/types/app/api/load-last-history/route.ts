@@ -1,4 +1,4 @@
-// File: C:\Users\danie\Desktop\kwai\app\api\load-last-history\route.ts
+// File: C:\Users\danie\Desktop\projetos\kwai\app\api\load-last-history\route.ts
 import * as entry from '../../../../../app/api/load-last-history/route.js'
 import type { NextRequest } from 'next/server.js'
 
