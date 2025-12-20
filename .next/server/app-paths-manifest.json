@@ -1,4 +1,6 @@
 {
-  "/api/catalog-config/route": "app/api/catalog-config/route.js",
-  "/page": "app/page.js"
+  "/api/custom-groups/route": "app/api/custom-groups/route.js",
+  "/api/load-last-history/route": "app/api/load-last-history/route.js",
+  "/page": "app/page.js",
+  "/api/catalog-config/route": "app/api/catalog-config/route.js"
 }
