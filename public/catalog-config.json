@@ -1,93 +1,13 @@
 {
   "catalogs": [
     {
-      "link": "b2b11266ec87d95a687ef55833339793",
-      "number": "500610",
+      "link": "6c27ee3081dfb292aba382744dfe4982",
+      "number": "336357",
       "name": "Contas do Kwai",
-      "createdAt": "2026-01-02T02:53:24.357Z",
+      "createdAt": "2026-01-10T22:43:06.745Z",
       "active": true,
       "selectedGroups": [
-        "19k"
-      ]
-    },
-    {
-      "link": "d93e396dd8db08db5e0140b18bdb74ab",
-      "number": "511254",
-      "name": "Contas do Kwai",
-      "createdAt": "2026-01-02T02:53:27.175Z",
-      "active": true,
-      "selectedGroups": [
-        "10k"
-      ]
-    },
-    {
-      "link": "c71bbf2601ef16d7c1ff8e23a7903f16",
-      "number": "412724",
-      "name": "Contas do Kwai",
-      "createdAt": "2026-01-03T17:09:02.429Z",
-      "active": true,
-      "selectedGroups": [
-        "1k"
-      ]
-    },
-    {
-      "link": "c450b902d2f3dabd06fff8d7871aa300",
-      "number": "156096",
-      "name": "Contas do Kwai",
-      "createdAt": "2026-01-03T17:11:13.876Z",
-      "active": true,
-      "selectedGroups": [
-        "2k"
-      ]
-    },
-    {
-      "link": "3ad39648ee434212a0be3138558ade3f",
-      "number": "660505",
-      "name": "Contas do Kwai",
-      "createdAt": "2026-01-05T13:49:29.329Z",
-      "active": true,
-      "selectedGroups": [
-        "4k"
-      ]
-    },
-    {
-      "link": "89286f851bb8d6ced9232f604277b80c",
-      "number": "134589",
-      "name": "Contas do Kwai",
-      "createdAt": "2026-01-05T13:50:06.865Z",
-      "active": true,
-      "selectedGroups": [
-        "15k"
-      ]
-    },
-    {
-      "link": "697e88d3611a65e0b5f9077499b8905f",
-      "number": "637888",
-      "name": "Contas do Kwai",
-      "createdAt": "2026-01-06T19:23:00.372Z",
-      "active": true,
-      "selectedGroups": [
-        "7k"
-      ]
-    },
-    {
-      "link": "9ca98bb97206e32ff4427823bde30152",
-      "number": "835680",
-      "name": "Contas do Kwai",
-      "createdAt": "2026-01-06T21:57:54.209Z",
-      "active": true,
-      "selectedGroups": [
-        "5k"
-      ]
-    },
-    {
-      "link": "997d033cd8f6c73b9aedd717d2a5a067",
-      "number": "481074",
-      "name": "Contas do Kwai",
-      "createdAt": "2026-01-07T14:28:24.936Z",
-      "active": true,
-      "selectedGroups": [
-        "12k"
+        "3k"
       ]
     }
   ]
