@@ -1,6 +1,35 @@
 {
   "history": [
     {
+      "date": "2026-01-20",
+      "startTime": "2026-01-20T00:16:19.207Z",
+      "endTime": "2026-01-20T04:31:21.650Z",
+      "totalAccounts": 200,
+      "groups": [
+        "custom-Grupo 20k"
+      ]
+    },
+    {
+      "date": "2026-01-19",
+      "startTime": "2026-01-19T08:55:53.319Z",
+      "endTime": "2026-01-19T11:58:28.600Z",
+      "totalAccounts": 268,
+      "groups": [
+        "9k",
+        "2k",
+        "4k"
+      ]
+    },
+    {
+      "date": "2026-01-18",
+      "startTime": "2026-01-18T11:49:04.072Z",
+      "endTime": "2026-01-18T14:09:15.764Z",
+      "totalAccounts": 80,
+      "groups": [
+        "custom-grupo 20k"
+      ]
+    },
+    {
       "date": "2026-01-17",
       "startTime": "2026-01-17T00:39:59.361Z",
       "endTime": "2026-01-17T09:11:34.506Z",
