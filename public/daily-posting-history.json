@@ -1,6 +1,27 @@
 {
   "history": [
     {
+      "date": "2026-01-28",
+      "startTime": "2026-01-28T12:32:29.744Z",
+      "endTime": "2026-01-28T14:56:17.653Z",
+      "totalAccounts": 76,
+      "groups": [
+        "10k",
+        "3k",
+        "19k"
+      ]
+    },
+    {
+      "date": "2026-01-27",
+      "startTime": "2026-01-27T03:46:57.473Z",
+      "endTime": "2026-01-27T07:13:20.750Z",
+      "totalAccounts": 118,
+      "groups": [
+        "3k",
+        "custom-Grupo 20k"
+      ]
+    },
+    {
       "date": "2026-01-26",
       "startTime": "2026-01-26T06:47:24.527Z",
       "endTime": "2026-01-26T06:47:55.802Z",
