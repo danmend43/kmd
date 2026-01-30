@@ -1633,7 +1633,18 @@
         }
       },
       "calendarMarked": true
+    },
+    "2026-01-29": {
+      "groups": {
+        "20k": {
+          "selected": [
+            "bradelydesrosiers@gmail.com"
+          ],
+          "startTime": "2026-01-29T07:45:29.304Z"
+        }
+      },
+      "calendarMarked": false
     }
   },
-  "lastUpdated": "2026-01-28T14:56:17.703Z"
+  "lastUpdated": "2026-01-29T07:45:29.328Z"
 }
