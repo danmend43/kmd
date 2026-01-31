@@ -84,8 +84,20 @@ export default function ProfileCard({ profileData, onCheckSequence, accountGoals
   const isCheckedToday = lastCheck === today
 
   const displayName = cleanDisplayName(profileData.displayName || profileData.name || profileData.username || 'N/A')
-  const email = profileData.email?.toLowerCase() || ''
-  const goal = accountGoals[email]
+  
+  // Obter identificador único (email, URL ou username)
+  const getIdentifier = (): string => {
+    if (profileData.email) return profileData.email.toLowerCase()
+    if (profileData.url) {
+      const urlNormalized = profileData.url.split('?')[0].toLowerCase()
+      return `url:${urlNormalized}`
+    }
+    if (profileData.username) return `username:${profileData.username.toLowerCase()}`
+    return `name:${displayName.toLowerCase()}`
+  }
+  
+  const identifier = getIdentifier()
+  const goal = accountGoals[identifier]
   const currentFollowers = parseFollowers(profileData.followers || '0')
   const percentage = goal > 0 ? Math.min((currentFollowers / goal) * 100, 100) : 0
   const isComplete = goal > 0 && currentFollowers >= goal
