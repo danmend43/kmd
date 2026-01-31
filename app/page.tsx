@@ -234,7 +234,7 @@ export default function Home() {
   const [showAddAccount, setShowAddAccount] = useState(false)
   const [selectedReservedAccount, setSelectedReservedAccount] = useState<AccountData | null>(null)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [newAccount, setNewAccount] = useState({
+  const [newAccount, setNewAccount] = useState<AccountData>({
     id: '',
     email: '',
     password: '',
@@ -243,7 +243,8 @@ export default function Home() {
     cel: '',
     name: '',
     note: '',
-    hidden: false
+    hidden: false,
+    reserved: false
   })
   const [historyFiles, setHistoryFiles] = useState<Array<{filename: string, date: string}>>([])
   const [selectedHistory, setSelectedHistory] = useState<string>('')
@@ -2745,7 +2746,8 @@ export default function Home() {
                                         cel: account.cel || '',
                                         name: account.name || '',
                                         note: account.note || '',
-                                        hidden: account.hidden || false
+                                        hidden: account.hidden || false,
+                                        reserved: account.reserved || false
                                       })
                                       setShowAddAccount(true)
                                     }}
