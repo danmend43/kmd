@@ -37,6 +37,7 @@ interface AccountData {
   url?: string
   note?: string
   hidden?: boolean // Conta oculta da postagem do dia
+  reserved?: boolean // Conta reservada (separada)
 }
 
 const defaultUrls = [
@@ -215,13 +216,15 @@ export default function Home() {
   const [loading, setLoading] = useState(false)
   const [progress, setProgress] = useState({ current: 0, total: 0 })
   const [error, setError] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'followers' | 'accounts' | 'urls' | 'history' | 'calendar' | 'groups' | 'postagem' | 'catalog-config' | 'config' | 'valores'>('dashboard')
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'followers' | 'accounts' | 'urls' | 'reserved-accounts' | 'history' | 'calendar' | 'groups' | 'postagem' | 'catalog-config' | 'config' | 'valores'>('dashboard')
   const [catalogConfig, setCatalogConfig] = useState({ 
     selectedGroups: [] as string[]
   })
   const [catalogs, setCatalogs] = useState<Array<{ link: string, number: string, name: string, createdAt: string, active: boolean, selectedGroups?: string[] }>>([])
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null)
   const [dailyPostingGroup, setDailyPostingGroup] = useState<string | null>(null) // Grupo selecionado na postagem do dia
+  const [dashboardGroupFilter, setDashboardGroupFilter] = useState<string | null>(null) // Grupo selecionado no dashboard
+  const [analyzingProfile, setAnalyzingProfile] = useState<string | null>(null) // URL do perfil sendo analisado individualmente
   const [dailyPosting, setDailyPosting] = useState<{ [key: string]: { groups: { [groupName: string]: { selected: string[], startTime?: string, endTime?: string } }, calendarMarked?: boolean } }>({})
   const [postingHistory, setPostingHistory] = useState<Array<{ date: string, startTime: string, endTime: string, totalAccounts: number, groups: string[] }>>([])
   const [sequences, setSequences] = useState<{ [key: string]: number }>({})
@@ -231,6 +234,8 @@ export default function Home() {
   const [editingUrl, setEditingUrl] = useState<string>('')
   const [newUrl, setNewUrl] = useState<string>('')
   const [showAddAccount, setShowAddAccount] = useState(false)
+  const [selectedReservedAccount, setSelectedReservedAccount] = useState<AccountData | null>(null)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [newAccount, setNewAccount] = useState({
     id: '',
     email: '',
@@ -430,10 +435,11 @@ export default function Home() {
               if (acc.id) {
                 existingIds.add(acc.id)
               }
-              // Garantir que o campo hidden seja preservado
+              // Garantir que os campos hidden e reserved sejam preservados
               return {
                 ...acc,
-                hidden: acc.hidden !== undefined ? acc.hidden : false
+                hidden: acc.hidden !== undefined ? acc.hidden : false,
+                reserved: acc.reserved !== undefined ? acc.reserved : false
               }
             })
             
@@ -451,12 +457,14 @@ export default function Home() {
                 return { 
                   ...acc, 
                   id: newId,
-                  hidden: acc.hidden !== undefined ? acc.hidden : false
+                  hidden: acc.hidden !== undefined ? acc.hidden : false,
+                  reserved: acc.reserved !== undefined ? acc.reserved : false
                 }
               }
               return {
                 ...acc,
-                hidden: acc.hidden !== undefined ? acc.hidden : false
+                hidden: acc.hidden !== undefined ? acc.hidden : false,
+                reserved: acc.reserved !== undefined ? acc.reserved : false
               }
             })
             
@@ -866,6 +874,11 @@ export default function Home() {
         return
       }
       
+      // Se a conta está reservada, não adicionar aos grupos
+      if (isAccountReserved(profileEmail)) {
+        return
+      }
+      
       const followersNum = parseFollowers(profile.followers || '0')
       const groupName = getGroupName(followersNum)
       
@@ -884,6 +897,14 @@ export default function Home() {
       (acc.email || '').toLowerCase() === (email || '').toLowerCase()
     )
     return account?.hidden || false
+  }
+
+  // Verificar se uma conta está reservada
+  const isAccountReserved = (email: string): boolean => {
+    const account = accounts.find(acc => 
+      (acc.email || '').toLowerCase() === (email || '').toLowerCase()
+    )
+    return account?.reserved || false
   }
 
   // Obter grupos personalizados com perfis
@@ -1694,6 +1715,20 @@ export default function Home() {
       <header className="header-new">
         <div className="flex items-center justify-between max-w-[1920px] mx-auto">
           <div className="flex items-center gap-3">
+            {/* Botão Hambúrguer para Mobile */}
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="lg:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors"
+              aria-label="Menu"
+            >
+              <svg className="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                {mobileMenuOpen ? (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                ) : (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                )}
+              </svg>
+            </button>
             <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-xl shadow-lg">
               K
             </div>
@@ -1707,19 +1742,28 @@ export default function Home() {
             className="btn-new btn-secondary-new"
           >
             <span>🚪</span>
-            <span>Sair</span>
+            <span className="hidden sm:inline">Sair</span>
           </button>
         </div>
       </header>
 
-      <div className="flex">
-        {/* Sidebar Nova */}
+      <div className="flex relative">
+        {/* Menu Mobile Overlay */}
+        {mobileMenuOpen && (
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+        )}
+
+        {/* Sidebar Nova - Desktop */}
         <aside className="sidebar-new hidden lg:block">
           <nav>
             {[
               { id: 'dashboard', label: 'Dashboard', icon: '📊' },
               { id: 'accounts', label: 'Contas', icon: '🔐' },
               { id: 'urls', label: 'URLs', icon: '🔗' },
+              { id: 'reserved-accounts', label: 'Contas Reservadas', icon: '📦' },
               { id: 'history', label: 'Histórico', icon: '📝' },
               { id: 'calendar', label: 'Calendário', icon: '📅' },
               { id: 'groups', label: 'Grupos', icon: '👥' },
@@ -1732,6 +1776,60 @@ export default function Home() {
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
                 className={`sidebar-item-new ${activeTab === tab.id ? 'active' : ''}`}
+              >
+                <span className="text-lg">{tab.icon}</span>
+                <span>{tab.label}</span>
+              </button>
+            ))}
+          </nav>
+        </aside>
+
+        {/* Sidebar Mobile */}
+        <aside 
+          className={`fixed left-0 top-0 h-full w-64 bg-white border-r border-gray-200 z-50 transform transition-transform duration-300 ease-in-out lg:hidden ${
+            mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
+          }`}
+        >
+          <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-lg shadow-lg">
+                K
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-slate-900">Menu</h2>
+              </div>
+            </div>
+            <button
+              onClick={() => setMobileMenuOpen(false)}
+              className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+              aria-label="Fechar menu"
+            >
+              <svg className="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          <nav className="p-4 overflow-y-auto h-[calc(100vh-80px)]">
+            {[
+              { id: 'dashboard', label: 'Dashboard', icon: '📊' },
+              { id: 'accounts', label: 'Contas', icon: '🔐' },
+              { id: 'urls', label: 'URLs', icon: '🔗' },
+              { id: 'reserved-accounts', label: 'Contas Reservadas', icon: '📦' },
+              { id: 'history', label: 'Histórico', icon: '📝' },
+              { id: 'calendar', label: 'Calendário', icon: '📅' },
+              { id: 'groups', label: 'Grupos', icon: '👥' },
+              { id: 'valores', label: 'Valores', icon: '💰' },
+              { id: 'postagem', label: 'Postagem do Dia', icon: '📄' },
+              { id: 'catalog-config', label: 'Configurar Catálogo', icon: '🎨' },
+              { id: 'config', label: 'Config', icon: '⚙️' },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => {
+                  setActiveTab(tab.id as any)
+                  setMobileMenuOpen(false)
+                }}
+                className={`sidebar-item-new w-full ${activeTab === tab.id ? 'active' : ''}`}
               >
                 <span className="text-lg">{tab.icon}</span>
                 <span>{tab.label}</span>
@@ -1857,23 +1955,32 @@ export default function Home() {
                   </div>
                 </div>
 
-                {profiles.length > 0 && (
+                {(() => {
+                  // Filtrar perfis baseado no grupo selecionado para estatísticas
+                  let filteredProfilesForStats = profiles
+                  if (dashboardGroupFilter) {
+                    const groupProfiles = groupedAccounts()[dashboardGroupFilter] || []
+                    const groupUrls = new Set(groupProfiles.map(p => p.url).filter(Boolean))
+                    filteredProfilesForStats = profiles.filter(p => p.url && groupUrls.has(p.url))
+                  }
+                  
+                  return filteredProfilesForStats.length > 0 && (
                   <div className="mb-8">
                     <h3 className="title-section">📈 Estatísticas Gerais</h3>
                     <div className="stats-grid">
                       <div className="stat-card">
-                        <div className="stat-value">{profiles.length}</div>
+                          <div className="stat-value">{filteredProfilesForStats.length}</div>
                         <div className="stat-label">Perfis Analisados</div>
                       </div>
                       <div className="stat-card">
                         <div className="stat-value">
-                          {profiles.reduce((sum, p) => sum + (parseInt(p.followers.replace(/[^\d]/g, '')) || 0), 0).toLocaleString()}
+                            {filteredProfilesForStats.reduce((sum, p) => sum + (parseInt(p.followers.replace(/[^\d]/g, '')) || 0), 0).toLocaleString()}
                         </div>
                         <div className="stat-label">Total Seguidores</div>
                       </div>
                       <div className="stat-card">
                         <div className="stat-value">
-                          {profiles.reduce((sum, p) => sum + (parseInt(p.likes.replace(/[^\d]/g, '')) || 0), 0).toLocaleString()}
+                            {filteredProfilesForStats.reduce((sum, p) => sum + (parseInt(p.likes.replace(/[^\d]/g, '')) || 0), 0).toLocaleString()}
                         </div>
                         <div className="stat-label">Total Curtidas</div>
                       </div>
@@ -1884,30 +1991,430 @@ export default function Home() {
                         <div className="stat-label">Dias Marcados</div>
                       </div>
                     </div>
-                  </div>
-                )}
+                      
+                      {/* Select de Filtro de Grupos */}
+                      <div className="mt-6">
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">Filtrar por Grupo</label>
+                        <div className="flex items-center gap-3 flex-wrap">
+                          <select
+                            value={dashboardGroupFilter || 'all'}
+                            onChange={(e) => setDashboardGroupFilter(e.target.value === 'all' ? null : e.target.value)}
+                            className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-700 font-medium min-w-[200px]"
+                          >
+                            <option value="all">Todos</option>
+                            {Object.keys(groupedAccounts()).sort((a, b) => {
+                              if (a === 'inicio') return -1
+                              if (b === 'inicio') return 1
+                              const numA = parseInt(a.replace('k', '')) || 0
+                              const numB = parseInt(b.replace('k', '')) || 0
+                              return numA - numB
+                            }).map((groupName) => (
+                              <option key={groupName} value={groupName}>
+                                {groupName === 'inicio' ? '< 1k' : groupName.toUpperCase()} ({groupedAccounts()[groupName]?.length || 0})
+                              </option>
+                            ))}
+                          </select>
+                          
+                          {dashboardGroupFilter && (
+                            <button
+                              onClick={async () => {
+                                const groupProfiles = groupedAccounts()[dashboardGroupFilter] || []
+                                const groupUrls = groupProfiles.map(p => p.url).filter(Boolean) as string[]
+                                
+                                if (groupUrls.length === 0) {
+                                  setError('Nenhuma URL encontrada para este grupo')
+                                  return
+                                }
 
-                {profiles.length > 0 && (
+                                setLoading(true)
+                                setError(null)
+                                setProgress({ current: 0, total: groupUrls.length })
+
+                                const results: ProfileData[] = []
+                                const errors: string[] = []
+                                const executionData: any[] = []
+                                let currentProfiles = [...profiles] // Manter referência atualizada dos perfis
+
+                                for (let i = 0; i < groupUrls.length; i++) {
+                                  const url = groupUrls[i].trim()
+                                  if (!url) continue
+
+                                  setProgress({ current: i + 1, total: groupUrls.length })
+
+                                  try {
+                                    const response = await fetch('/api/analyze', {
+                                      method: 'POST',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({ url }),
+                                    })
+
+                                    const data = await response.json()
+
+                                    if (!response.ok) {
+                                      errors.push(`${url}: ${data.error || 'Erro ao analisar'}`)
+                                      continue
+                                    }
+
+                                    // Buscar dados da conta correspondente (das contas cadastradas) - mesma lógica da análise geral
+                                    const usernameMatch = url.match(/@([^\/\?]+)/)
+                                    const username = usernameMatch ? usernameMatch[1].toLowerCase() : ''
+                                    
+                                    // Buscar nas contas cadastradas - múltiplas estratégias
+                                    let account = null
+                                    
+                                    // Estratégia 1: Match por URL exata (mais confiável)
+                                    account = accounts.find(acc => acc.url && acc.url.toLowerCase() === url.toLowerCase())
+                                    
+                                    // Estratégia 2: Match por URL normalizada (sem query params)
+                                    if (!account) {
+                                      const urlNormalized = url.split('?')[0].toLowerCase()
+                                      account = accounts.find(acc => {
+                                        if (!acc.url) return false
+                                        const accUrlNormalized = acc.url.split('?')[0].toLowerCase()
+                                        return accUrlNormalized === urlNormalized
+                                      })
+                                    }
+                                    
+                                    // Estratégia 3: Match por username extraído da URL com email
+                                    if (!account && username) {
+                                      account = accounts.find(acc => {
+                                        const accEmail = acc.email.toLowerCase()
+                                        const emailUsername = accEmail.split('@')[0]
+                                        return emailUsername === username || accEmail.includes(username)
+                                      })
+                                    }
+                                    
+                                    // Se encontrou a conta, atualizar com o nome buscado (igual análise geral)
+                                    if (account) {
+                                      const accountIndex = accounts.findIndex(acc => 
+                                        acc.id === account.id || 
+                                        acc.email === account.email ||
+                                        (acc.url && account.url && acc.url === account.url)
+                                      )
+                                      
+                                      if (accountIndex >= 0) {
+                                        const updatedAccounts = [...accounts]
+                                        const extractedName = cleanDisplayName(data.displayName || data.username || '')
+                                        
+                                        // Só atualizar se houver dados extraídos válidos
+                                        if (extractedName && extractedName !== '') {
+                                          updatedAccounts[accountIndex] = {
+                                            ...updatedAccounts[accountIndex],
+                                            name: extractedName
+                                          }
+                                          setAccounts(updatedAccounts)
+                                          
+                                          // Salvar no arquivo
+                                          try {
+                                            await fetch('/api/accounts', {
+                                              method: 'POST',
+                                              headers: { 'Content-Type': 'application/json' },
+                                              body: JSON.stringify({ accounts: updatedAccounts }),
+                                            })
+                                            console.log(`✅ Conta atualizada: ${account.email} -> Nome: ${extractedName}`)
+                                          } catch (e) {
+                                            console.error('Erro ao atualizar conta:', e)
+                                          }
+                                        }
+                                      }
+                                    } else {
+                                      console.warn(`⚠️ Conta não encontrada para URL: ${url}`)
+                                    }
+                                    
+                                    const profile: ProfileData = {
+                                      ...data,
+                                      url,
+                                      email: account?.email || '',
+                                      password: account?.password || '',
+                                      name: account?.name || cleanDisplayName(data.displayName || data.username || ''),
+                                      sequence: sequences['global'] || 0
+                                    }
+
+                                    results.push(profile)
+                                    
+                                    // Adicionar aos dados de execução para salvar no histórico
+                                    executionData.push({
+                                      url,
+                                      email: profile.email || '',
+                                      name: profile.name || '',
+                                      username: data.username || '',
+                                      avatar: data.avatar || '',
+                                      followers: data.followers || '',
+                                      likes: data.likes || '',
+                                      verified: data.verified || false
+                                    })
+                                    
+                                    const updatedProfiles = [...currentProfiles]
+                                    const existingIndex = updatedProfiles.findIndex(p => p.url === url)
+                                    if (existingIndex >= 0) {
+                                      updatedProfiles[existingIndex] = profile
+                                    } else {
+                                      updatedProfiles.push(profile)
+                                    }
+                                    currentProfiles = updatedProfiles // Atualizar referência local
+                                    setProfiles(updatedProfiles)
+                                  } catch (err: any) {
+                                    errors.push(`${url}: ${err.message || 'Erro ao analisar'}`)
+                                  }
+
+                                  await new Promise(resolve => setTimeout(resolve, 2000))
+                                }
+
+                                // Salvar histórico em arquivo (sempre que houver resultados) - mesclando dados novos com existentes
+                                if (executionData.length > 0) {
+                                  try {
+                                    // Mesclar dados novos (executionData) com perfis existentes (currentProfiles)
+                                    // Criar um mapa dos perfis atualizados para facilitar a busca
+                                    const updatedDataMap = new Map(executionData.map((item: any) => [item.url, item]))
+                                    
+                                    // Formatar todos os perfis para o histórico, usando dados atualizados quando disponíveis
+                                    const allHistoryData = currentProfiles.map(p => {
+                                      const updated = updatedDataMap.get(p.url)
+                                      if (updated) {
+                                        // Usar dados atualizados
+                                        return {
+                                          url: updated.url || p.url || '',
+                                          email: updated.email || p.email || '',
+                                          name: updated.name || p.name || '',
+                                          username: updated.username || p.username || '',
+                                          avatar: updated.avatar || p.avatar || '',
+                                          followers: updated.followers || p.followers || '',
+                                          likes: updated.likes || p.likes || '',
+                                          verified: updated.verified !== undefined ? updated.verified : p.verified || false
+                                        }
+                                      }
+                                      // Usar dados existentes
+                                      return {
+                                        url: p.url || '',
+                                        email: p.email || '',
+                                        name: p.name || '',
+                                        username: p.username || '',
+                                        avatar: p.avatar || '',
+                                        followers: p.followers || '',
+                                        likes: p.likes || '',
+                                        verified: p.verified || false
+                                      }
+                                    })
+                                    
+                                    // Adicionar perfis novos que não existiam antes
+                                    executionData.forEach((item: any) => {
+                                      if (!allHistoryData.find(p => p.url === item.url)) {
+                                        allHistoryData.push(item)
+                                      }
+                                    })
+
+                                    console.log(`💾 Atualizando histórico mais recente com ${allHistoryData.length} perfis (${executionData.length} atualizados)...`)
+                                    const response = await fetch('/api/save-history', {
+                                      method: 'POST',
+                                      headers: {
+                                        'Content-Type': 'application/json',
+                                      },
+                                      body: JSON.stringify({ data: allHistoryData, updateLatest: true }),
+                                    })
+                                    
+                                    if (response.ok) {
+                                      const result = await response.json()
+                                      console.log('✅ Histórico salvo com sucesso:', result.filename || result.message)
+                                      
+                                      // Atualizar dados dos grupos imediatamente após salvar
+                                      if (results.length > 0) {
+                                        setGroupsProfiles(currentProfiles)
+                                        // Verificar e atualizar grupos personalizados baseado em seguidores atuais
+                                        verifyAndUpdateCustomGroups(currentProfiles)
+                                      }
+                                    } else {
+                                      const errorData = await response.json().catch(() => ({ error: 'Erro desconhecido' }))
+                                      console.error('❌ Erro ao salvar histórico:', errorData.error || 'Erro desconhecido')
+                                    }
+                                  } catch (e: any) {
+                                    console.error('❌ Erro ao salvar histórico:', e.message || e)
+                                  }
+                                } else {
+                                  console.warn('⚠️ Nenhum dado para salvar no histórico')
+                                }
+
+                                setLoading(false)
+                                if (errors.length > 0) {
+                                  setError(`Alguns erros ocorreram: ${errors.slice(0, 3).join(', ')}${errors.length > 3 ? '...' : ''}`)
+                                }
+                              }}
+                              disabled={loading}
+                              className="btn-new btn-primary-new disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {loading ? (
+                                <>
+                                  <div className="spinner-new"></div>
+                                  <span>Analisando... {progress.current}/{progress.total}</span>
+                                </>
+                              ) : (
+                                <>
+                                  <span>🚀</span>
+                                  <span>Analisar Grupo {dashboardGroupFilter === 'inicio' ? '< 1k' : dashboardGroupFilter.toUpperCase()}</span>
+                                </>
+                              )}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })()}
+
+                {(() => {
+                  // Filtrar perfis baseado no grupo selecionado
+                  let filteredProfiles = profiles
+                  if (dashboardGroupFilter) {
+                    const groupProfiles = groupedAccounts()[dashboardGroupFilter] || []
+                    const groupUrls = new Set(groupProfiles.map(p => p.url).filter(Boolean))
+                    filteredProfiles = profiles.filter(p => p.url && groupUrls.has(p.url))
+                  }
+                  
+                  return filteredProfiles.length > 0 && (
                   <div className="card-new">
-                    <h2 className="title-section">👥 Perfis Analisados ({profiles.length})</h2>
+                      <h2 className="title-section">
+                        👥 Perfis Analisados ({filteredProfiles.length})
+                        {dashboardGroupFilter && (
+                          <span className="text-sm font-normal text-gray-600 ml-2">
+                            - Grupo: {dashboardGroupFilter === 'inicio' ? '< 1k' : dashboardGroupFilter.toUpperCase()}
+                          </span>
+                        )}
+                      </h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
-                      {profiles.map((profile, index) => {
+                        {filteredProfiles.map((profile, index) => {
                         // Atualizar sequência do perfil com a sequência global do calendário
                         const profileWithSequence = {
                           ...profile,
                           sequence: sequences['global'] || 0
                         }
+                          const isAnalyzing = analyzingProfile === profile.url
+                          
                         return (
+                            <div key={index} className="relative">
                           <ProfileCard 
-                            key={index} 
                             profileData={profileWithSequence}
                             onCheckSequence={() => handleCheckSequence(profile.url)}
                           />
+                              <button
+                                onClick={async () => {
+                                  if (!profile.url) return
+                                  
+                                  setAnalyzingProfile(profile.url)
+                                  try {
+                                    const response = await fetch('/api/analyze', {
+                                      method: 'POST',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({ url: profile.url }),
+                                    })
+
+                                    const data = await response.json()
+
+                                    if (!response.ok) {
+                                      setError(`Erro ao analisar ${profile.url}: ${data.error || 'Erro desconhecido'}`)
+                                      return
+                                    }
+
+                                    // Buscar dados da conta correspondente (das contas cadastradas) - mesma lógica da análise geral
+                                    const usernameMatch = profile.url.match(/@([^\/\?]+)/)
+                                    const username = usernameMatch ? usernameMatch[1].toLowerCase() : ''
+                                    
+                                    // Buscar nas contas cadastradas - múltiplas estratégias
+                                    let account = null
+                                    
+                                    // Estratégia 1: Match por URL exata (mais confiável)
+                                    account = accounts.find(acc => acc.url && acc.url.toLowerCase() === profile.url.toLowerCase())
+                                    
+                                    // Estratégia 2: Match por URL normalizada (sem query params)
+                                    if (!account) {
+                                      const urlNormalized = profile.url.split('?')[0].toLowerCase()
+                                      account = accounts.find(acc => {
+                                        if (!acc.url) return false
+                                        const accUrlNormalized = acc.url.split('?')[0].toLowerCase()
+                                        return accUrlNormalized === urlNormalized
+                                      })
+                                    }
+                                    
+                                    // Estratégia 3: Match por username extraído da URL com email
+                                    if (!account && username) {
+                                      account = accounts.find(acc => {
+                                        const accEmail = acc.email.toLowerCase()
+                                        const emailUsername = accEmail.split('@')[0]
+                                        return emailUsername === username || accEmail.includes(username)
+                                      })
+                                    }
+                                    
+                                    // Se encontrou a conta, atualizar com o nome buscado (igual análise geral)
+                                    if (account) {
+                                      const accountIndex = accounts.findIndex(acc => 
+                                        acc.id === account.id || 
+                                        acc.email === account.email ||
+                                        (acc.url && account.url && acc.url === account.url)
+                                      )
+                                      
+                                      if (accountIndex >= 0) {
+                                        const updatedAccounts = [...accounts]
+                                        const extractedName = cleanDisplayName(data.displayName || data.username || '')
+                                        
+                                        // Só atualizar se houver dados extraídos válidos
+                                        if (extractedName && extractedName !== '') {
+                                          updatedAccounts[accountIndex] = {
+                                            ...updatedAccounts[accountIndex],
+                                            name: extractedName
+                                          }
+                                          setAccounts(updatedAccounts)
+                                          
+                                          // Salvar no arquivo
+                                          try {
+                                            await fetch('/api/accounts', {
+                                              method: 'POST',
+                                              headers: { 'Content-Type': 'application/json' },
+                                              body: JSON.stringify({ accounts: updatedAccounts }),
+                                            })
+                                            console.log(`✅ Conta atualizada: ${account.email} -> Nome: ${extractedName}`)
+                                          } catch (e) {
+                                            console.error('Erro ao atualizar conta:', e)
+                                          }
+                                        }
+                                      }
+                                    } else {
+                                      console.warn(`⚠️ Conta não encontrada para URL: ${profile.url}`)
+                                    }
+                                    
+                                    const updatedProfile: ProfileData = {
+                                      ...data,
+                                      url: profile.url,
+                                      email: account?.email || profile.email || '',
+                                      password: account?.password || profile.password || '',
+                                      name: account?.name || cleanDisplayName(data.displayName || data.username || '') || profile.name,
+                                      sequence: sequences['global'] || profile.sequence || 0
+                                    }
+
+                                    const updatedProfiles = profiles.map(p => 
+                                      p.url === profile.url ? updatedProfile : p
+                                    )
+                                    setProfiles(updatedProfiles)
+                                  } catch (err: any) {
+                                    setError(`Erro ao analisar ${profile.url}: ${err.message}`)
+                                  } finally {
+                                    setAnalyzingProfile(null)
+                                  }
+                                }}
+                                disabled={isAnalyzing || loading}
+                                className="absolute top-2 right-2 p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg z-10"
+                                title="Analisar individualmente"
+                              >
+                                {isAnalyzing ? (
+                                  <div className="spinner-new w-4 h-4 border-2 border-white border-t-transparent"></div>
+                                ) : (
+                                  <span>🔄</span>
+                                )}
+                              </button>
+                            </div>
                         )
                       })}
                     </div>
                   </div>
-                )}
+                  )
+                })()}
               </>
             )}
 
@@ -2261,7 +2768,8 @@ export default function Home() {
                               name: nameValue,
                               number: newAccount.number ? newAccount.number.trim() : '',
                               note: noteValue,
-                              hidden: newAccount.hidden !== undefined ? newAccount.hidden : (existingAccount?.hidden !== undefined ? existingAccount.hidden : false)
+                              hidden: newAccount.hidden !== undefined ? newAccount.hidden : (existingAccount?.hidden !== undefined ? existingAccount.hidden : false),
+                              reserved: newAccount.reserved !== undefined ? newAccount.reserved : (existingAccount?.reserved !== undefined ? existingAccount.reserved : false)
                             }
                             
                             if (editingAccountIndex !== null) {
@@ -2308,7 +2816,7 @@ export default function Home() {
                               }
                             }
                             
-                            setNewAccount({ id: '', email: '', password: '', url: '', number: '', cel: '', name: '', note: '', hidden: false })
+                            setNewAccount({ id: '', email: '', password: '', url: '', number: '', cel: '', name: '', note: '', hidden: false, reserved: false })
                             setShowAddAccount(false)
                             setError(null)
                             setDuplicateAccount(null)
@@ -2322,7 +2830,7 @@ export default function Home() {
                           onClick={() => {
                             setShowAddAccount(false)
                             setEditingAccountIndex(null)
-                            setNewAccount({ id: '', email: '', password: '', url: '', number: '', cel: '', name: '', note: '', hidden: false })
+                            setNewAccount({ id: '', email: '', password: '', url: '', number: '', cel: '', name: '', note: '', hidden: false, reserved: false })
                             setError(null)
                             setDuplicateAccount(null)
                             setDuplicateAccountProfile(null)
@@ -2428,7 +2936,7 @@ export default function Home() {
                           </td>
                         </tr>
                       ) : (
-                        accounts.map((account, index) => {
+                        accounts.filter(acc => !(acc.reserved || false)).map((account, index) => {
                           const copyNumber = () => {
                             if (account.number) {
                               navigator.clipboard.writeText(account.number)
@@ -2444,7 +2952,11 @@ export default function Home() {
 
                           const handleRemoveAccount = async () => {
                             if (confirm(`Tem certeza que deseja remover esta conta?\n${account.email}`)) {
-                              const updatedAccounts = accounts.filter((_, i) => i !== index)
+                              // Encontrar o índice real da conta no array completo
+                              const realIndex = accounts.findIndex(acc => acc.email === account.email)
+                              if (realIndex === -1) return
+                              
+                              const updatedAccounts = accounts.filter((_, i) => i !== realIndex)
                               
                               // Reajustar IDs sequencialmente (1, 2, 3, ...)
                               const reindexedAccounts = updatedAccounts.map((acc, idx) => ({
@@ -2502,8 +3014,12 @@ export default function Home() {
 
                           // Função para toggle do estado hidden
                           const handleToggleHidden = async () => {
+                            // Encontrar o índice real da conta no array completo
+                            const realIndex = accounts.findIndex(acc => acc.email === account.email)
+                            if (realIndex === -1) return
+
                             const updatedAccounts = accounts.map((acc, i) => {
-                              if (i === index) {
+                              if (i === realIndex) {
                                 return {
                                   ...acc,
                                   hidden: !(acc.hidden || false)
@@ -2525,6 +3041,46 @@ export default function Home() {
                               })
                               if (!response.ok) {
                                 console.error('Erro ao salvar contas:', await response.text())
+                              }
+                            } catch (e) {
+                              console.error('Erro ao salvar contas:', e)
+                              alert('Erro ao salvar. Tente novamente.')
+                            }
+                          }
+
+                          // Função para separar conta (marcar como reservada)
+                          const handleToggleReserved = async () => {
+                            // Encontrar o índice real da conta no array completo
+                            const realIndex = accounts.findIndex(acc => acc.email === account.email)
+                            if (realIndex === -1) return
+
+                            const updatedAccounts = accounts.map((acc, i) => {
+                              if (i === realIndex) {
+                                return {
+                                  ...acc,
+                                  reserved: !(acc.reserved || false)
+                                }
+                              }
+                              return acc
+                            })
+                            setAccounts(updatedAccounts)
+                            
+                            // Salvar no servidor
+                            try {
+                              const response = await fetch('/api/accounts', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ accounts: updatedAccounts }),
+                              })
+                              if (!response.ok) {
+                                console.error('Erro ao salvar contas:', await response.text())
+                              } else {
+                                // Salvar contas reservadas em arquivo txt
+                                await fetch('/api/reserved-accounts', {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ accounts: updatedAccounts.filter(acc => acc.reserved) }),
+                                })
                               }
                             } catch (e) {
                               console.error('Erro ao salvar contas:', e)
@@ -2578,8 +3134,19 @@ export default function Home() {
                                     👁️
                                   </button>
                                   <button
+                                    onClick={handleToggleReserved}
+                                    className="p-2 rounded transition-colors bg-gray-100 text-gray-600 hover:bg-gray-200"
+                                    title="Separar conta (mover para contas reservadas)"
+                                  >
+                                    📦
+                                  </button>
+                                  <button
                                     onClick={() => {
-                                      setEditingAccountIndex(index)
+                                      // Encontrar o índice real da conta no array completo
+                                      const realIndex = accounts.findIndex(acc => acc.email === account.email)
+                                      if (realIndex === -1) return
+                                      
+                                      setEditingAccountIndex(realIndex)
                                       setNewAccount({
                                         id: account.id || '',
                                         email: account.email,
@@ -2769,6 +3336,332 @@ export default function Home() {
                     </div>
                   )}
                 </div>
+              </div>
+            )}
+
+            {/* Reserved Accounts Tab */}
+            {activeTab === 'reserved-accounts' && (
+              <div className="card-new">
+                <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 mb-6">
+                  <h2 className="title-section">📦 Contas Reservadas</h2>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="bg-gray-50 border-b">
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">ID</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Email</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Senha</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Nome</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Cel</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Nota</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Ações</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {accounts.filter(acc => acc.reserved || false).length === 0 ? (
+                        <tr>
+                          <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
+                            Nenhuma conta reservada.
+                          </td>
+                        </tr>
+                      ) : (
+                        accounts.filter(acc => acc.reserved || false).map((account, index) => {
+                          // Função para retirar conta (voltar para contas normais)
+                          const handleUnreserveAccount = async () => {
+                            // Encontrar o índice real da conta no array completo
+                            const realIndex = accounts.findIndex(acc => acc.email === account.email)
+                            if (realIndex === -1) return
+
+                            const updatedAccounts = accounts.map((acc, i) => {
+                              if (i === realIndex) {
+                                return {
+                                  ...acc,
+                                  reserved: false
+                                }
+                              }
+                              return acc
+                            })
+                            setAccounts(updatedAccounts)
+                            
+                            // Salvar no servidor
+                            try {
+                              const response = await fetch('/api/accounts', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ accounts: updatedAccounts }),
+                              })
+                              if (!response.ok) {
+                                console.error('Erro ao salvar contas:', await response.text())
+                              } else {
+                                // Salvar contas reservadas em arquivo txt
+                                await fetch('/api/reserved-accounts', {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ accounts: updatedAccounts.filter(acc => acc.reserved) }),
+                                })
+                              }
+                            } catch (e) {
+                              console.error('Erro ao salvar contas:', e)
+                              alert('Erro ao salvar. Tente novamente.')
+                            }
+                          }
+
+                          return (
+                            <tr 
+                              key={index} 
+                              className="border-b hover:bg-gray-50 cursor-pointer"
+                              onClick={() => setSelectedReservedAccount(account)}
+                            >
+                              <td className="px-4 py-3 text-sm text-gray-700 font-bold font-mono">
+                                {account.id || '-'}
+                              </td>
+                              <td className="px-4 py-3 text-sm text-gray-700">
+                                {account.email}
+                              </td>
+                              <td className="px-4 py-3 text-sm text-gray-700 font-mono">{account.password}</td>
+                              <td className="px-4 py-3 text-sm text-gray-700 font-semibold">
+                                {account.name || 'N/A'}
+                              </td>
+                              <td className="px-4 py-3 text-sm text-gray-700">{account.cel || 'N/A'}</td>
+                              <td className="px-4 py-3 text-sm">
+                                {account.note ? (
+                                  <span className="inline-block px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-semibold">
+                                    {account.note}
+                                  </span>
+                                ) : (
+                                  <span className="text-gray-400 text-xs">-</span>
+                                )}
+                              </td>
+                              <td className="px-4 py-3 text-sm">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleUnreserveAccount()
+                                  }}
+                                  className="px-3 py-1 bg-green-500 text-white text-xs font-semibold rounded hover:bg-green-600 transition-colors"
+                                  title="Retirar conta (voltar para contas normais)"
+                                >
+                                  ↪️ Retirar
+                                </button>
+                              </td>
+                            </tr>
+                          )
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Modal de Detalhes da Conta Reservada */}
+                {selectedReservedAccount && (
+                  <div className="modal-overlay" onClick={() => setSelectedReservedAccount(null)}>
+                    <div className="modal-content max-w-2xl" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center justify-between mb-6">
+                        <h3 className="title-section">📦 Detalhes da Conta Reservada</h3>
+                        <button
+                          onClick={() => setSelectedReservedAccount(null)}
+                          className="text-gray-400 hover:text-gray-600 text-2xl font-bold"
+                        >
+                          ×
+                        </button>
+                      </div>
+                      
+                      <div className="space-y-4">
+                        <div className="bg-gray-50 rounded-lg p-4">
+                          <label className="block text-sm font-semibold text-gray-600 mb-1">ID</label>
+                          <p 
+                            className="text-lg font-bold text-gray-800 font-mono cursor-pointer hover:text-purple-600 transition-colors"
+                            onClick={async () => {
+                              if (selectedReservedAccount.id) {
+                                await navigator.clipboard.writeText(selectedReservedAccount.id)
+                                alert('ID copiado!')
+                              }
+                            }}
+                            title="Clique para copiar"
+                          >
+                            {selectedReservedAccount.id || '-'}
+                          </p>
+                        </div>
+
+                        <div className="bg-gray-50 rounded-lg p-4">
+                          <label className="block text-sm font-semibold text-gray-600 mb-1">Email</label>
+                          <p 
+                            className="text-lg text-gray-800 cursor-pointer hover:text-purple-600 transition-colors"
+                            onClick={async () => {
+                              await navigator.clipboard.writeText(selectedReservedAccount.email)
+                              alert('Email copiado!')
+                            }}
+                            title="Clique para copiar"
+                          >
+                            {selectedReservedAccount.email}
+                          </p>
+                        </div>
+
+                        <div className="bg-gray-50 rounded-lg p-4">
+                          <label className="block text-sm font-semibold text-gray-600 mb-1">Senha</label>
+                          <p 
+                            className="text-lg text-gray-800 font-mono cursor-pointer hover:text-purple-600 transition-colors"
+                            onClick={async () => {
+                              await navigator.clipboard.writeText(selectedReservedAccount.password)
+                              alert('Senha copiada!')
+                            }}
+                            title="Clique para copiar"
+                          >
+                            {selectedReservedAccount.password}
+                          </p>
+                        </div>
+
+                        <div className="bg-gray-50 rounded-lg p-4">
+                          <label className="block text-sm font-semibold text-gray-600 mb-1">Nome</label>
+                          <p 
+                            className="text-lg text-gray-800 font-semibold cursor-pointer hover:text-purple-600 transition-colors"
+                            onClick={async () => {
+                              if (selectedReservedAccount.name) {
+                                await navigator.clipboard.writeText(selectedReservedAccount.name)
+                                alert('Nome copiado!')
+                              }
+                            }}
+                            title="Clique para copiar"
+                          >
+                            {selectedReservedAccount.name || 'N/A'}
+                          </p>
+                        </div>
+
+                        {selectedReservedAccount.number && (
+                          <div className="bg-gray-50 rounded-lg p-4">
+                            <label className="block text-sm font-semibold text-gray-600 mb-1">Número</label>
+                            <p 
+                              className="text-lg text-gray-800 cursor-pointer hover:text-purple-600 transition-colors"
+                              onClick={async () => {
+                                await navigator.clipboard.writeText(selectedReservedAccount.number!)
+                                alert('Número copiado!')
+                              }}
+                              title="Clique para copiar"
+                            >
+                              {selectedReservedAccount.number}
+                            </p>
+                          </div>
+                        )}
+
+                        <div className="bg-gray-50 rounded-lg p-4">
+                          <label className="block text-sm font-semibold text-gray-600 mb-1">Cel</label>
+                          <p 
+                            className="text-lg text-gray-800 cursor-pointer hover:text-purple-600 transition-colors"
+                            onClick={async () => {
+                              if (selectedReservedAccount.cel && selectedReservedAccount.cel !== 'N/A') {
+                                await navigator.clipboard.writeText(selectedReservedAccount.cel)
+                                alert('Cel copiado!')
+                              }
+                            }}
+                            title="Clique para copiar"
+                          >
+                            {selectedReservedAccount.cel || 'N/A'}
+                          </p>
+                        </div>
+
+                        {selectedReservedAccount.url && (
+                          <div className="bg-gray-50 rounded-lg p-4">
+                            <label className="block text-sm font-semibold text-gray-600 mb-1">Link do Kwai</label>
+                            <p 
+                              className="text-sm text-gray-800 font-mono break-all cursor-pointer hover:text-purple-600 transition-colors"
+                              onClick={async () => {
+                                await navigator.clipboard.writeText(selectedReservedAccount.url!)
+                                alert('Link copiado!')
+                              }}
+                              title="Clique para copiar"
+                            >
+                              {selectedReservedAccount.url}
+                            </p>
+                          </div>
+                        )}
+
+                        {selectedReservedAccount.note && (
+                          <div className="bg-gray-50 rounded-lg p-4">
+                            <label className="block text-sm font-semibold text-gray-600 mb-1">Nota</label>
+                            <p 
+                              className="text-lg text-gray-800 cursor-pointer"
+                              onClick={async () => {
+                                await navigator.clipboard.writeText(selectedReservedAccount.note!)
+                                alert('Nota copiada!')
+                              }}
+                              title="Clique para copiar"
+                            >
+                              <span className="inline-block px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm font-semibold hover:bg-purple-200 transition-colors">
+                                {selectedReservedAccount.note}
+                              </span>
+                            </p>
+                          </div>
+                        )}
+
+                        <div className="bg-gray-50 rounded-lg p-4">
+                          <label className="block text-sm font-semibold text-gray-600 mb-1">Status</label>
+                          <div className="flex gap-2 items-center">
+                            <span className="inline-block px-3 py-1 bg-orange-100 text-orange-800 rounded-full text-sm font-semibold">
+                              📦 Reservada
+                            </span>
+                            {selectedReservedAccount.hidden && (
+                              <span className="inline-block px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm font-semibold">
+                                👁️ Ocultada
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-3 mt-6">
+                        <button
+                          onClick={async () => {
+                            const realIndex = accounts.findIndex(acc => acc.email === selectedReservedAccount.email)
+                            if (realIndex === -1) return
+
+                            const updatedAccounts = accounts.map((acc, i) => {
+                              if (i === realIndex) {
+                                return {
+                                  ...acc,
+                                  reserved: false
+                                }
+                              }
+                              return acc
+                            })
+                            setAccounts(updatedAccounts)
+                            
+                            try {
+                              const response = await fetch('/api/accounts', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ accounts: updatedAccounts }),
+                              })
+                              if (!response.ok) {
+                                console.error('Erro ao salvar contas:', await response.text())
+                              } else {
+                                await fetch('/api/reserved-accounts', {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ accounts: updatedAccounts.filter(acc => acc.reserved) }),
+                                })
+                                setSelectedReservedAccount(null)
+                              }
+                            } catch (e) {
+                              console.error('Erro ao salvar contas:', e)
+                              alert('Erro ao salvar. Tente novamente.')
+                            }
+                          }}
+                          className="btn-new btn-success-new flex-1"
+                        >
+                          ↪️ Retirar da Reserva
+                        </button>
+                        <button
+                          onClick={() => setSelectedReservedAccount(null)}
+                          className="btn-new btn-secondary-new flex-1"
+                        >
+                          Fechar
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -3942,8 +4835,10 @@ export default function Home() {
                       index === self.findIndex((p) => p.email?.toLowerCase() === profile.email?.toLowerCase())
                     )
                     
-                    // Filtrar contas ocultas da postagem do dia
-                    groupProfiles = uniqueProfiles.filter(profile => !isAccountHidden(profile.email || ''))
+                    // Filtrar contas ocultas e reservadas da postagem do dia
+                    groupProfiles = uniqueProfiles.filter(profile => 
+                      !isAccountHidden(profile.email || '') && !isAccountReserved(profile.email || '')
+                    )
                     groupDisplayName = 'Todas as Contas'
                   } else if (dailyPostingGroup.startsWith('custom-')) {
                     const groupName = dailyPostingGroup.replace('custom-', '')
@@ -3961,14 +4856,18 @@ export default function Home() {
                       groupProfiles = allGroupProfiles
                     }
                     
-                    // Filtrar contas ocultas da postagem do dia
-                    groupProfiles = groupProfiles.filter(profile => !isAccountHidden(profile.email || ''))
+                    // Filtrar contas ocultas e reservadas da postagem do dia
+                    groupProfiles = groupProfiles.filter(profile => 
+                      !isAccountHidden(profile.email || '') && !isAccountReserved(profile.email || '')
+                    )
                     
                     groupDisplayName = groupName
                   } else {
                     const allGroupProfiles = groupedAccounts()[dailyPostingGroup] || []
-                    // Filtrar contas ocultas da postagem do dia
-                    groupProfiles = allGroupProfiles.filter(profile => !isAccountHidden(profile.email || ''))
+                    // Filtrar contas ocultas e reservadas da postagem do dia
+                    groupProfiles = allGroupProfiles.filter(profile => 
+                      !isAccountHidden(profile.email || '') && !isAccountReserved(profile.email || '')
+                    )
                     groupDisplayName = dailyPostingGroup === 'inicio' ? '< 1k' : dailyPostingGroup.toUpperCase()
                   }
                   

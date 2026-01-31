@@ -28,6 +28,7 @@ interface AccountData {
   number?: string
   cel?: string
   url?: string
+  reserved?: boolean
 }
 
 interface CatalogConfig {
@@ -359,6 +360,15 @@ export default function CatalogPage() {
     
     // Usar os perfis do histórico diretamente (igual à aba de grupos)
     profiles.forEach(profile => {
+      // Filtrar contas reservadas
+      const profileEmail = (profile.email || '').toLowerCase()
+      const account = accounts.find(acc => 
+        (acc.email || '').toLowerCase() === profileEmail
+      )
+      if (account?.reserved) {
+        return // Não adicionar contas reservadas aos grupos
+      }
+      
       const followersNum = parseFollowers(profile.followers || '0')
       const groupName = getGroupName(followersNum)
       
