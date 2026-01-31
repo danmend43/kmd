@@ -267,6 +267,10 @@ export default function Home() {
   const [groupCovers, setGroupCovers] = useState<{ [groupName: string]: string }>({}) // Capas de todos os grupos
   const [duplicateAccount, setDuplicateAccount] = useState<AccountData | null>(null) // Conta duplicada encontrada
   const [duplicateAccountProfile, setDuplicateAccountProfile] = useState<ProfileData | null>(null) // Perfil da conta duplicada
+  const [accountGoals, setAccountGoals] = useState<{ [key: string]: number }>({}) // Metas de seguidores por conta { "email|url|username": 10000 }
+  const [showGoalModal, setShowGoalModal] = useState(false) // Modal para definir meta
+  const [selectedAccountIdentifier, setSelectedAccountIdentifier] = useState<string | null>(null) // Identificador único da conta (email, URL ou username)
+  const [goalInput, setGoalInput] = useState<string>('') // Input da meta (em K)
 
   // Salvar URLs no arquivo
   const saveUrls = async (urlsToSave: string[]) => {
@@ -505,6 +509,20 @@ export default function Home() {
 
     loadAccounts()
 
+    // Carregar metas das contas do localStorage
+    const loadAccountGoals = () => {
+      try {
+        const savedGoals = localStorage.getItem('accountGoals')
+        if (savedGoals) {
+          setAccountGoals(JSON.parse(savedGoals))
+        }
+      } catch (e) {
+        console.error('Erro ao carregar metas:', e)
+      }
+    }
+
+    loadAccountGoals()
+
     const loadDailyPosting = async () => {
       try {
         const response = await fetch('/api/daily-posting')
@@ -728,6 +746,32 @@ export default function Home() {
     
     // Se é apenas número
     return parseInt(cleaned.replace(/[^\d]/g, '') || '0')
+  }
+
+  // Função para calcular e formatar dias restantes para completar a meta
+  // Cada 1K de seguidores faltantes = 3 dias
+  const calculateDaysRemaining = (currentFollowers: number, goal: number): string => {
+    if (currentFollowers >= goal) {
+      return 'Meta atingida! 🎉'
+    }
+    
+    const followersRemaining = goal - currentFollowers
+    const followersRemainingInK = followersRemaining / 1000
+    const totalDays = Math.ceil(followersRemainingInK * 3) // Cada 1K = 3 dias
+    
+    if (totalDays <= 30) {
+      return `Faltam ${totalDays} ${totalDays === 1 ? 'dia' : 'dias'}`
+    }
+    
+    // Se passar de 30 dias, converter para meses
+    const months = Math.floor(totalDays / 30)
+    const remainingDays = totalDays % 30
+    
+    if (remainingDays === 0) {
+      return `Faltam ${months} ${months === 1 ? 'mês' : 'meses'}`
+    } else {
+      return `Faltam ${months} ${months === 1 ? 'mês' : 'meses'} e ${remainingDays} ${remainingDays === 1 ? 'dia' : 'dias'}`
+    }
   }
 
   // Função para determinar o grupo de uma conta baseado nos seguidores
@@ -1999,6 +2043,13 @@ export default function Home() {
                             key={index} 
                             profileData={profileWithSequence}
                             onCheckSequence={() => handleCheckSequence(profile.url)}
+                            accountGoals={accountGoals}
+                            onSetGoal={(identifier) => {
+                              const currentGoal = accountGoals[identifier]
+                              setSelectedAccountIdentifier(identifier)
+                              setGoalInput(currentGoal ? String(currentGoal / 1000) : '')
+                              setShowGoalModal(true)
+                            }}
                           />
                         )
                       })}
@@ -3614,9 +3665,63 @@ export default function Home() {
                           return null
                         }
                         
+                        // Função para encontrar o email da conta correspondente
+                        const getAccountEmail = (): string | null => {
+                          // Se o perfil já tem email, usar ele
+                          if (profile.email) return profile.email.toLowerCase()
+                          
+                          // Tentar encontrar conta pela URL
+                          if (profile.url) {
+                            const urlNormalized = profile.url.split('?')[0].toLowerCase()
+                            const account = accounts.find(acc => {
+                              if (!acc.url) return false
+                              const accUrlNormalized = acc.url.split('?')[0].toLowerCase()
+                              return accUrlNormalized === urlNormalized
+                            })
+                            if (account?.email) return account.email.toLowerCase()
+                            
+                            // Tentar match por username da URL
+                            const usernameMatch = profile.url.match(/@([^\/\?]+)/)
+                            const username = usernameMatch ? usernameMatch[1].toLowerCase() : ''
+                            if (username) {
+                              const accountByUsername = accounts.find(acc => {
+                                const accEmail = acc.email.toLowerCase()
+                                const emailUsername = accEmail.split('@')[0]
+                                return emailUsername === username || accEmail.includes(username)
+                              })
+                              if (accountByUsername?.email) return accountByUsername.email.toLowerCase()
+                            }
+                          }
+                          
+                          return null
+                        }
+                        
+                        // Função para obter identificador único (email, URL ou username)
+                        const getAccountIdentifier = (): string => {
+                          // Prioridade 1: Email da conta
+                          const accountEmail = getAccountEmail()
+                          if (accountEmail) return accountEmail
+                          
+                          // Prioridade 2: URL do perfil
+                          if (profile.url) {
+                            const urlNormalized = profile.url.split('?')[0].toLowerCase()
+                            return `url:${urlNormalized}`
+                          }
+                          
+                          // Prioridade 3: Username
+                          if (profile.username) {
+                            return `username:${profile.username.toLowerCase()}`
+                          }
+                          
+                          // Fallback: usar displayName como último recurso
+                          return `name:${(profile.displayName || profile.name || '').toLowerCase()}`
+                        }
+                        
                         const kwaiUrl = getKwaiUrl()
+                        const accountEmail = getAccountEmail()
+                        const accountIdentifier = getAccountIdentifier()
                         const displayName = cleanDisplayName(profile.displayName || profile.name || profile.username || profile.email || 'N/A')
-                        const isHidden = isAccountHidden(profile.email || '')
+                        const isHidden = isAccountHidden(accountEmail || profile.email || '')
                         
                         return (
                           <div
@@ -3695,14 +3800,80 @@ export default function Home() {
                                 </div>
                               </div>
                               
+                              {/* Meta e Progress Bar */}
+                              <div className="pt-3 border-t border-gray-100">
+                                <div className="flex items-center justify-between mb-2">
+                                  <div className="flex items-center gap-2">
+                                    <button
+                                      onClick={() => {
+                                        const identifier = accountIdentifier
+                                        const currentGoal = accountGoals[identifier]
+                                        setSelectedAccountIdentifier(identifier)
+                                        setGoalInput(currentGoal ? String(currentGoal / 1000) : '')
+                                        setShowGoalModal(true)
+                                      }}
+                                      className="p-1.5 rounded-lg bg-purple-100 hover:bg-purple-200 transition-colors"
+                                      title="Definir meta de seguidores"
+                                    >
+                                      <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                                      </svg>
+                                    </button>
+                                    <span className="text-xs text-gray-600 font-medium">
+                                      {accountGoals[accountIdentifier] 
+                                        ? `Meta: ${accountGoals[accountIdentifier] >= 1000 ? `${accountGoals[accountIdentifier] / 1000}K` : accountGoals[accountIdentifier]}`
+                                        : 'Sem meta'}
+                                    </span>
+                                  </div>
+                                </div>
+                                {accountGoals[accountIdentifier] && (() => {
+                                  const identifier = accountIdentifier
+                                  const goal = accountGoals[identifier]
+                                  const currentFollowers = parseFollowers(profile.followers || '0')
+                                  const percentage = goal > 0 ? Math.min((currentFollowers / goal) * 100, 100) : 0
+                                  const isComplete = currentFollowers >= goal
+                                  // Formatar porcentagem: mostrar 1 casa decimal se não for 100%, senão mostrar inteiro
+                                  const percentageDisplay = isComplete ? '100' : percentage.toFixed(1)
+                                  const daysRemaining = calculateDaysRemaining(currentFollowers, goal)
+                                  
+                                  return (
+                                    <div className="space-y-1">
+                                      <div className="flex items-center justify-between text-xs">
+                                        <span className="text-gray-600">
+                                          {currentFollowers >= 1000 ? `${(currentFollowers / 1000).toFixed(1)}K` : currentFollowers} / {goal >= 1000 ? `${goal / 1000}K` : goal}
+                                        </span>
+                                        <span className={`font-semibold ${isComplete ? 'text-green-600' : 'text-purple-600'}`}>
+                                          {percentageDisplay}%
+                                        </span>
+                                      </div>
+                                      <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+                                        <div
+                                          className={`h-2.5 rounded-full transition-all duration-300 ${
+                                            isComplete
+                                              ? 'bg-gradient-to-r from-green-500 to-green-600'
+                                              : 'bg-gradient-to-r from-purple-500 to-pink-500'
+                                          }`}
+                                          style={{ width: `${percentage}%` }}
+                                        ></div>
+                                      </div>
+                                      {!isComplete && (
+                                        <div className="text-xs text-gray-500 mt-1 text-center">
+                                          {daysRemaining}
+                                        </div>
+                                      )}
+                                    </div>
+                                  )
+                                })()}
+                              </div>
+                              
                               {/* Email */}
-                              {profile.email && (
+                              {accountEmail && (
                                 <div className="pt-2 border-t border-gray-100">
                                   <div className="flex items-center gap-2 text-xs text-gray-500 truncate">
                                     <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                                     </svg>
-                                    <span className="truncate">{profile.email}</span>
+                                    <span className="truncate">{accountEmail}</span>
                                   </div>
                                 </div>
                               )}
@@ -3720,13 +3891,13 @@ export default function Home() {
                               )}
                               
                               {/* Botão para remover de grupo personalizado ou mover para outro */}
-                              {selectedGroup.startsWith('custom-') && profile.email && (
+                              {selectedGroup.startsWith('custom-') && accountEmail && (
                                 <div className="pt-2">
                                   <button
                                     onClick={async () => {
-                                      if (!profile.email) return
+                                      if (!accountEmail) return
                                       
-                                      const profileEmail = profile.email.toLowerCase()
+                                      const profileEmail = accountEmail.toLowerCase()
                                       const groupName = selectedGroup.replace('custom-', '')
                                       
                                       const newCustomGroups = { ...customGroups }
@@ -3760,12 +3931,12 @@ export default function Home() {
                                 </div>
                               )}
                               {/* Botão para mover para grupo personalizado */}
-                              {!selectedGroup.startsWith('custom-') && profile.email && (
+                              {!selectedGroup.startsWith('custom-') && (
                                 <div className="pt-2">
                                   <select
                                     onChange={async (e) => {
                                       const targetGroup = e.target.value
-                                      if (!targetGroup || !profile.email) {
+                                      if (!targetGroup) {
                                         e.target.value = ''
                                         return
                                       }
@@ -3773,14 +3944,22 @@ export default function Home() {
                                       // Se selecionou criar novo grupo, abrir modal
                                       if (targetGroup === '__create__') {
                                         setNewGroupName('')
-                                        setPendingMoveEmail(profile.email.toLowerCase())
+                                        // Se tiver email, usar email, senão usar identificador
+                                        setPendingMoveEmail(accountEmail ? accountEmail.toLowerCase() : accountIdentifier)
                                         setShowCreateGroupModal(true)
                                         // Resetar select
                                         e.target.value = ''
                                         return
                                       }
                                       
-                                      const profileEmail = profile.email.toLowerCase()
+                                      // Só pode mover se tiver email (grupos personalizados usam emails)
+                                      if (!accountEmail) {
+                                        alert('Esta conta precisa ter um email cadastrado para ser movida para um grupo personalizado.')
+                                        e.target.value = ''
+                                        return
+                                      }
+                                      
+                                      const profileEmail = accountEmail.toLowerCase()
                                       
                                       // Remover de todos os grupos personalizados primeiro
                                       const newCustomGroups = { ...customGroups }
@@ -3903,6 +4082,107 @@ export default function Home() {
                             setPendingMoveEmail(null)
                           }}
                           className="flex-1 px-4 py-2 bg-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-400 transition-all"
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Modal para Definir Meta */}
+                {showGoalModal && selectedAccountIdentifier && (
+                  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => {
+                    setShowGoalModal(false)
+                    setSelectedAccountIdentifier(null)
+                    setGoalInput('')
+                  }}>
+                    <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
+                      <h3 className="text-xl font-bold text-gray-800 mb-4">🎯 Definir Meta de Seguidores</h3>
+                      <p className="text-sm text-gray-600 mb-4">
+                        Defina a meta de seguidores para esta conta (de 1K até 100K)
+                      </p>
+                      <div className="mb-4">
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          Meta (em K):
+                        </label>
+                        <input
+                          type="number"
+                          min="1"
+                          max="100"
+                          step="1"
+                          value={goalInput}
+                          onChange={(e) => {
+                            const value = e.target.value
+                            // Permitir apenas números inteiros de 1 a 100
+                            if (value === '' || (parseInt(value) >= 1 && parseInt(value) <= 100)) {
+                              setGoalInput(value)
+                            }
+                          }}
+                          placeholder="Ex: 10 (para 10K)"
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                          autoFocus
+                        />
+                        <p className="text-xs text-gray-500 mt-1">
+                          Digite um valor de 1 a 100 (sem decimais)
+                        </p>
+                      </div>
+                      <div className="flex gap-3">
+                        <button
+                          onClick={() => {
+                            if (goalInput && selectedAccountIdentifier) {
+                              const goalValue = parseInt(goalInput)
+                              if (goalValue >= 1 && goalValue <= 100) {
+                                const newGoals = { ...accountGoals }
+                                newGoals[selectedAccountIdentifier] = goalValue * 1000 // Converter K para número
+                                setAccountGoals(newGoals)
+                                // Salvar no localStorage
+                                try {
+                                  localStorage.setItem('accountGoals', JSON.stringify(newGoals))
+                                } catch (e) {
+                                  console.error('Erro ao salvar metas:', e)
+                                }
+                                setShowGoalModal(false)
+                                setSelectedAccountIdentifier(null)
+                                setGoalInput('')
+                              } else {
+                                alert('Por favor, digite um valor entre 1 e 100')
+                              }
+                            }
+                          }}
+                          disabled={!goalInput || parseInt(goalInput) < 1 || parseInt(goalInput) > 100}
+                          className="flex-1 px-4 py-2 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          Salvar
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (selectedAccountIdentifier && accountGoals[selectedAccountIdentifier]) {
+                              const newGoals = { ...accountGoals }
+                              delete newGoals[selectedAccountIdentifier]
+                              setAccountGoals(newGoals)
+                              // Salvar no localStorage
+                              try {
+                                localStorage.setItem('accountGoals', JSON.stringify(newGoals))
+                              } catch (e) {
+                                console.error('Erro ao salvar metas:', e)
+                              }
+                            }
+                            setShowGoalModal(false)
+                            setSelectedAccountIdentifier(null)
+                            setGoalInput('')
+                          }}
+                          className="px-4 py-2 bg-red-500 text-white font-semibold rounded-lg hover:bg-red-600 transition-all"
+                        >
+                          Remover
+                        </button>
+                        <button
+                          onClick={() => {
+                            setShowGoalModal(false)
+                            setSelectedAccountIdentifier(null)
+                            setGoalInput('')
+                          }}
+                          className="px-4 py-2 bg-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-400 transition-all"
                         >
                           Cancelar
                         </button>

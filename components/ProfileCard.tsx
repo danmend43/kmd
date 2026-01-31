@@ -16,6 +16,8 @@ interface ProfileData {
 interface ProfileCardProps {
   profileData: ProfileData
   onCheckSequence?: () => void
+  accountGoals?: { [key: string]: number }
+  onSetGoal?: (identifier: string) => void
 }
 
 // Função para limpar o nome, removendo " (@username) on Kwai"
@@ -25,12 +27,70 @@ const cleanDisplayName = (name: string): string => {
   return name.replace(/\s*\(@[^)]+\)\s*on\s+Kwai\s*$/i, '').trim()
 }
 
-export default function ProfileCard({ profileData, onCheckSequence }: ProfileCardProps) {
+// Função para converter seguidores em número
+const parseFollowers = (followersStr: string): number => {
+  if (!followersStr || followersStr === 'N/A' || followersStr === '0') return 0
+  
+  // Remover caracteres não numéricos exceto ponto e vírgula
+  const cleaned = followersStr.replace(/[^\d.,KkMmBb]/g, '')
+  
+  // Se contém K, M ou B
+  if (cleaned.toLowerCase().includes('k')) {
+    const num = parseFloat(cleaned.replace(/[kK]/g, '').replace(',', '.'))
+    return Math.floor(num * 1000)
+  }
+  if (cleaned.toLowerCase().includes('m')) {
+    const num = parseFloat(cleaned.replace(/[mM]/g, '').replace(',', '.'))
+    return Math.floor(num * 1000000)
+  }
+  if (cleaned.toLowerCase().includes('b')) {
+    const num = parseFloat(cleaned.replace(/[bB]/g, '').replace(',', '.'))
+    return Math.floor(num * 1000000000)
+  }
+  
+  // Apenas números
+  return parseInt(cleaned.replace(/[^\d]/g, '')) || 0
+}
+
+// Função para calcular e formatar dias restantes para completar a meta
+// Cada 1K de seguidores faltantes = 3 dias
+const calculateDaysRemaining = (currentFollowers: number, goal: number): string => {
+  if (currentFollowers >= goal) {
+    return 'Meta atingida! 🎉'
+  }
+  
+  const followersRemaining = goal - currentFollowers
+  const followersRemainingInK = followersRemaining / 1000
+  const totalDays = Math.ceil(followersRemainingInK * 3) // Cada 1K = 3 dias
+  
+  if (totalDays <= 30) {
+    return `Faltam ${totalDays} ${totalDays === 1 ? 'dia' : 'dias'}`
+  }
+  
+  // Se passar de 30 dias, converter para meses
+  const months = Math.floor(totalDays / 30)
+  const remainingDays = totalDays % 30
+  
+  if (remainingDays === 0) {
+    return `Faltam ${months} ${months === 1 ? 'mês' : 'meses'}`
+  } else {
+    return `Faltam ${months} ${months === 1 ? 'mês' : 'meses'} e ${remainingDays} ${remainingDays === 1 ? 'dia' : 'dias'}`
+  }
+}
+
+export default function ProfileCard({ profileData, onCheckSequence, accountGoals = {}, onSetGoal }: ProfileCardProps) {
   const today = typeof window !== 'undefined' ? new Date().toISOString().split('T')[0] : ''
   const lastCheck = typeof window !== 'undefined' ? localStorage.getItem(`check_${profileData.url}`) : null
   const isCheckedToday = lastCheck === today
 
   const displayName = cleanDisplayName(profileData.displayName || profileData.name || profileData.username || 'N/A')
+  const email = profileData.email?.toLowerCase() || ''
+  const goal = accountGoals[email]
+  const currentFollowers = parseFollowers(profileData.followers || '0')
+  const percentage = goal > 0 ? Math.min((currentFollowers / goal) * 100, 100) : 0
+  const isComplete = goal > 0 && currentFollowers >= goal
+  // Formatar porcentagem: mostrar 1 casa decimal se não for 100%, senão mostrar inteiro
+  const percentageDisplay = isComplete ? '100' : percentage.toFixed(1)
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 hover:border-purple-300 hover:shadow-lg transition-all overflow-hidden">
@@ -75,6 +135,55 @@ export default function ProfileCard({ profileData, onCheckSequence }: ProfileCar
             <div className="text-xs text-pink-600 font-medium mb-1">Curtidas</div>
             <div className="text-base font-bold text-gray-800">{profileData.likes || 'N/A'}</div>
           </div>
+        </div>
+
+        {/* Meta e Progress Bar */}
+        <div className="pt-2 border-t border-gray-100">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => onSetGoal && onSetGoal(identifier)}
+                className="p-1.5 rounded-lg bg-purple-100 hover:bg-purple-200 transition-colors"
+                title="Definir meta de seguidores"
+              >
+                <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+              </button>
+              <span className="text-xs text-gray-600 font-medium">
+                {goal 
+                  ? `Meta: ${goal >= 1000 ? `${goal / 1000}K` : goal}`
+                  : 'Sem meta'}
+              </span>
+            </div>
+          </div>
+          {goal && (
+            <div className="space-y-1">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-gray-600">
+                  {currentFollowers >= 1000 ? `${(currentFollowers / 1000).toFixed(1)}K` : currentFollowers} / {goal >= 1000 ? `${goal / 1000}K` : goal}
+                </span>
+                <span className={`font-semibold ${isComplete ? 'text-green-600' : 'text-purple-600'}`}>
+                  {percentageDisplay}%
+                </span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+                <div
+                  className={`h-2.5 rounded-full transition-all duration-300 ${
+                    isComplete
+                      ? 'bg-gradient-to-r from-green-500 to-green-600'
+                      : 'bg-gradient-to-r from-purple-500 to-pink-500'
+                  }`}
+                  style={{ width: `${percentage}%` }}
+                ></div>
+              </div>
+              {!isComplete && (
+                <div className="text-xs text-gray-500 mt-1 text-center">
+                  {calculateDaysRemaining(currentFollowers, goal)}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Ações */}

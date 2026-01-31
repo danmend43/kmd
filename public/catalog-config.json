@@ -39,6 +39,16 @@
       "selectedGroups": [
         "20k"
       ]
+    },
+    {
+      "link": "56ed428773cb3bf9b71d3d4f79881f3f",
+      "number": "508948",
+      "name": "Contas do Kwai",
+      "createdAt": "2026-01-31T17:18:10.440Z",
+      "active": true,
+      "selectedGroups": [
+        "4k"
+      ]
     }
   ]
 }
