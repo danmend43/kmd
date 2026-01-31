@@ -223,8 +223,6 @@ export default function Home() {
   const [catalogs, setCatalogs] = useState<Array<{ link: string, number: string, name: string, createdAt: string, active: boolean, selectedGroups?: string[] }>>([])
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null)
   const [dailyPostingGroup, setDailyPostingGroup] = useState<string | null>(null) // Grupo selecionado na postagem do dia
-  const [dashboardGroupFilter, setDashboardGroupFilter] = useState<string | null>(null) // Grupo selecionado no dashboard
-  const [analyzingProfile, setAnalyzingProfile] = useState<string | null>(null) // URL do perfil sendo analisado individualmente
   const [dailyPosting, setDailyPosting] = useState<{ [key: string]: { groups: { [groupName: string]: { selected: string[], startTime?: string, endTime?: string } }, calendarMarked?: boolean } }>({})
   const [postingHistory, setPostingHistory] = useState<Array<{ date: string, startTime: string, endTime: string, totalAccounts: number, groups: string[] }>>([])
   const [sequences, setSequences] = useState<{ [key: string]: number }>({})
@@ -1955,32 +1953,23 @@ export default function Home() {
                   </div>
                 </div>
 
-                {(() => {
-                  // Filtrar perfis baseado no grupo selecionado para estatísticas
-                  let filteredProfilesForStats = profiles
-                  if (dashboardGroupFilter) {
-                    const groupProfiles = groupedAccounts()[dashboardGroupFilter] || []
-                    const groupUrls = new Set(groupProfiles.map(p => p.url).filter(Boolean))
-                    filteredProfilesForStats = profiles.filter(p => p.url && groupUrls.has(p.url))
-                  }
-                  
-                  return filteredProfilesForStats.length > 0 && (
+                {profiles.length > 0 && (
                   <div className="mb-8">
                     <h3 className="title-section">📈 Estatísticas Gerais</h3>
                     <div className="stats-grid">
                       <div className="stat-card">
-                          <div className="stat-value">{filteredProfilesForStats.length}</div>
+                        <div className="stat-value">{profiles.length}</div>
                         <div className="stat-label">Perfis Analisados</div>
                       </div>
                       <div className="stat-card">
                         <div className="stat-value">
-                            {filteredProfilesForStats.reduce((sum, p) => sum + (parseInt(p.followers.replace(/[^\d]/g, '')) || 0), 0).toLocaleString()}
+                          {profiles.reduce((sum, p) => sum + (parseInt(p.followers.replace(/[^\d]/g, '')) || 0), 0).toLocaleString()}
                         </div>
                         <div className="stat-label">Total Seguidores</div>
                       </div>
                       <div className="stat-card">
                         <div className="stat-value">
-                            {filteredProfilesForStats.reduce((sum, p) => sum + (parseInt(p.likes.replace(/[^\d]/g, '')) || 0), 0).toLocaleString()}
+                          {profiles.reduce((sum, p) => sum + (parseInt(p.likes.replace(/[^\d]/g, '')) || 0), 0).toLocaleString()}
                         </div>
                         <div className="stat-label">Total Curtidas</div>
                       </div>
@@ -1991,430 +1980,30 @@ export default function Home() {
                         <div className="stat-label">Dias Marcados</div>
                       </div>
                     </div>
-                      
-                      {/* Select de Filtro de Grupos */}
-                      <div className="mt-6">
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">Filtrar por Grupo</label>
-                        <div className="flex items-center gap-3 flex-wrap">
-                          <select
-                            value={dashboardGroupFilter || 'all'}
-                            onChange={(e) => setDashboardGroupFilter(e.target.value === 'all' ? null : e.target.value)}
-                            className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-700 font-medium min-w-[200px]"
-                          >
-                            <option value="all">Todos</option>
-                            {Object.keys(groupedAccounts()).sort((a, b) => {
-                              if (a === 'inicio') return -1
-                              if (b === 'inicio') return 1
-                              const numA = parseInt(a.replace('k', '')) || 0
-                              const numB = parseInt(b.replace('k', '')) || 0
-                              return numA - numB
-                            }).map((groupName) => (
-                              <option key={groupName} value={groupName}>
-                                {groupName === 'inicio' ? '< 1k' : groupName.toUpperCase()} ({groupedAccounts()[groupName]?.length || 0})
-                              </option>
-                            ))}
-                          </select>
-                          
-                          {dashboardGroupFilter && (
-                            <button
-                              onClick={async () => {
-                                const groupProfiles = groupedAccounts()[dashboardGroupFilter] || []
-                                const groupUrls = groupProfiles.map(p => p.url).filter(Boolean) as string[]
-                                
-                                if (groupUrls.length === 0) {
-                                  setError('Nenhuma URL encontrada para este grupo')
-                                  return
-                                }
+                  </div>
+                )}
 
-                                setLoading(true)
-                                setError(null)
-                                setProgress({ current: 0, total: groupUrls.length })
-
-                                const results: ProfileData[] = []
-                                const errors: string[] = []
-                                const executionData: any[] = []
-                                let currentProfiles = [...profiles] // Manter referência atualizada dos perfis
-
-                                for (let i = 0; i < groupUrls.length; i++) {
-                                  const url = groupUrls[i].trim()
-                                  if (!url) continue
-
-                                  setProgress({ current: i + 1, total: groupUrls.length })
-
-                                  try {
-                                    const response = await fetch('/api/analyze', {
-                                      method: 'POST',
-                                      headers: { 'Content-Type': 'application/json' },
-                                      body: JSON.stringify({ url }),
-                                    })
-
-                                    const data = await response.json()
-
-                                    if (!response.ok) {
-                                      errors.push(`${url}: ${data.error || 'Erro ao analisar'}`)
-                                      continue
-                                    }
-
-                                    // Buscar dados da conta correspondente (das contas cadastradas) - mesma lógica da análise geral
-                                    const usernameMatch = url.match(/@([^\/\?]+)/)
-                                    const username = usernameMatch ? usernameMatch[1].toLowerCase() : ''
-                                    
-                                    // Buscar nas contas cadastradas - múltiplas estratégias
-                                    let account = null
-                                    
-                                    // Estratégia 1: Match por URL exata (mais confiável)
-                                    account = accounts.find(acc => acc.url && acc.url.toLowerCase() === url.toLowerCase())
-                                    
-                                    // Estratégia 2: Match por URL normalizada (sem query params)
-                                    if (!account) {
-                                      const urlNormalized = url.split('?')[0].toLowerCase()
-                                      account = accounts.find(acc => {
-                                        if (!acc.url) return false
-                                        const accUrlNormalized = acc.url.split('?')[0].toLowerCase()
-                                        return accUrlNormalized === urlNormalized
-                                      })
-                                    }
-                                    
-                                    // Estratégia 3: Match por username extraído da URL com email
-                                    if (!account && username) {
-                                      account = accounts.find(acc => {
-                                        const accEmail = acc.email.toLowerCase()
-                                        const emailUsername = accEmail.split('@')[0]
-                                        return emailUsername === username || accEmail.includes(username)
-                                      })
-                                    }
-                                    
-                                    // Se encontrou a conta, atualizar com o nome buscado (igual análise geral)
-                                    if (account) {
-                                      const accountIndex = accounts.findIndex(acc => 
-                                        acc.id === account.id || 
-                                        acc.email === account.email ||
-                                        (acc.url && account.url && acc.url === account.url)
-                                      )
-                                      
-                                      if (accountIndex >= 0) {
-                                        const updatedAccounts = [...accounts]
-                                        const extractedName = cleanDisplayName(data.displayName || data.username || '')
-                                        
-                                        // Só atualizar se houver dados extraídos válidos
-                                        if (extractedName && extractedName !== '') {
-                                          updatedAccounts[accountIndex] = {
-                                            ...updatedAccounts[accountIndex],
-                                            name: extractedName
-                                          }
-                                          setAccounts(updatedAccounts)
-                                          
-                                          // Salvar no arquivo
-                                          try {
-                                            await fetch('/api/accounts', {
-                                              method: 'POST',
-                                              headers: { 'Content-Type': 'application/json' },
-                                              body: JSON.stringify({ accounts: updatedAccounts }),
-                                            })
-                                            console.log(`✅ Conta atualizada: ${account.email} -> Nome: ${extractedName}`)
-                                          } catch (e) {
-                                            console.error('Erro ao atualizar conta:', e)
-                                          }
-                                        }
-                                      }
-                                    } else {
-                                      console.warn(`⚠️ Conta não encontrada para URL: ${url}`)
-                                    }
-                                    
-                                    const profile: ProfileData = {
-                                      ...data,
-                                      url,
-                                      email: account?.email || '',
-                                      password: account?.password || '',
-                                      name: account?.name || cleanDisplayName(data.displayName || data.username || ''),
-                                      sequence: sequences['global'] || 0
-                                    }
-
-                                    results.push(profile)
-                                    
-                                    // Adicionar aos dados de execução para salvar no histórico
-                                    executionData.push({
-                                      url,
-                                      email: profile.email || '',
-                                      name: profile.name || '',
-                                      username: data.username || '',
-                                      avatar: data.avatar || '',
-                                      followers: data.followers || '',
-                                      likes: data.likes || '',
-                                      verified: data.verified || false
-                                    })
-                                    
-                                    const updatedProfiles = [...currentProfiles]
-                                    const existingIndex = updatedProfiles.findIndex(p => p.url === url)
-                                    if (existingIndex >= 0) {
-                                      updatedProfiles[existingIndex] = profile
-                                    } else {
-                                      updatedProfiles.push(profile)
-                                    }
-                                    currentProfiles = updatedProfiles // Atualizar referência local
-                                    setProfiles(updatedProfiles)
-                                  } catch (err: any) {
-                                    errors.push(`${url}: ${err.message || 'Erro ao analisar'}`)
-                                  }
-
-                                  await new Promise(resolve => setTimeout(resolve, 2000))
-                                }
-
-                                // Salvar histórico em arquivo (sempre que houver resultados) - mesclando dados novos com existentes
-                                if (executionData.length > 0) {
-                                  try {
-                                    // Mesclar dados novos (executionData) com perfis existentes (currentProfiles)
-                                    // Criar um mapa dos perfis atualizados para facilitar a busca
-                                    const updatedDataMap = new Map(executionData.map((item: any) => [item.url, item]))
-                                    
-                                    // Formatar todos os perfis para o histórico, usando dados atualizados quando disponíveis
-                                    const allHistoryData = currentProfiles.map(p => {
-                                      const updated = updatedDataMap.get(p.url)
-                                      if (updated) {
-                                        // Usar dados atualizados
-                                        return {
-                                          url: updated.url || p.url || '',
-                                          email: updated.email || p.email || '',
-                                          name: updated.name || p.name || '',
-                                          username: updated.username || p.username || '',
-                                          avatar: updated.avatar || p.avatar || '',
-                                          followers: updated.followers || p.followers || '',
-                                          likes: updated.likes || p.likes || '',
-                                          verified: updated.verified !== undefined ? updated.verified : p.verified || false
-                                        }
-                                      }
-                                      // Usar dados existentes
-                                      return {
-                                        url: p.url || '',
-                                        email: p.email || '',
-                                        name: p.name || '',
-                                        username: p.username || '',
-                                        avatar: p.avatar || '',
-                                        followers: p.followers || '',
-                                        likes: p.likes || '',
-                                        verified: p.verified || false
-                                      }
-                                    })
-                                    
-                                    // Adicionar perfis novos que não existiam antes
-                                    executionData.forEach((item: any) => {
-                                      if (!allHistoryData.find(p => p.url === item.url)) {
-                                        allHistoryData.push(item)
-                                      }
-                                    })
-
-                                    console.log(`💾 Atualizando histórico mais recente com ${allHistoryData.length} perfis (${executionData.length} atualizados)...`)
-                                    const response = await fetch('/api/save-history', {
-                                      method: 'POST',
-                                      headers: {
-                                        'Content-Type': 'application/json',
-                                      },
-                                      body: JSON.stringify({ data: allHistoryData, updateLatest: true }),
-                                    })
-                                    
-                                    if (response.ok) {
-                                      const result = await response.json()
-                                      console.log('✅ Histórico salvo com sucesso:', result.filename || result.message)
-                                      
-                                      // Atualizar dados dos grupos imediatamente após salvar
-                                      if (results.length > 0) {
-                                        setGroupsProfiles(currentProfiles)
-                                        // Verificar e atualizar grupos personalizados baseado em seguidores atuais
-                                        verifyAndUpdateCustomGroups(currentProfiles)
-                                      }
-                                    } else {
-                                      const errorData = await response.json().catch(() => ({ error: 'Erro desconhecido' }))
-                                      console.error('❌ Erro ao salvar histórico:', errorData.error || 'Erro desconhecido')
-                                    }
-                                  } catch (e: any) {
-                                    console.error('❌ Erro ao salvar histórico:', e.message || e)
-                                  }
-                                } else {
-                                  console.warn('⚠️ Nenhum dado para salvar no histórico')
-                                }
-
-                                setLoading(false)
-                                if (errors.length > 0) {
-                                  setError(`Alguns erros ocorreram: ${errors.slice(0, 3).join(', ')}${errors.length > 3 ? '...' : ''}`)
-                                }
-                              }}
-                              disabled={loading}
-                              className="btn-new btn-primary-new disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                              {loading ? (
-                                <>
-                                  <div className="spinner-new"></div>
-                                  <span>Analisando... {progress.current}/{progress.total}</span>
-                                </>
-                              ) : (
-                                <>
-                                  <span>🚀</span>
-                                  <span>Analisar Grupo {dashboardGroupFilter === 'inicio' ? '< 1k' : dashboardGroupFilter.toUpperCase()}</span>
-                                </>
-                              )}
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  )
-                })()}
-
-                {(() => {
-                  // Filtrar perfis baseado no grupo selecionado
-                  let filteredProfiles = profiles
-                  if (dashboardGroupFilter) {
-                    const groupProfiles = groupedAccounts()[dashboardGroupFilter] || []
-                    const groupUrls = new Set(groupProfiles.map(p => p.url).filter(Boolean))
-                    filteredProfiles = profiles.filter(p => p.url && groupUrls.has(p.url))
-                  }
-                  
-                  return filteredProfiles.length > 0 && (
+                {profiles.length > 0 && (
                   <div className="card-new">
-                      <h2 className="title-section">
-                        👥 Perfis Analisados ({filteredProfiles.length})
-                        {dashboardGroupFilter && (
-                          <span className="text-sm font-normal text-gray-600 ml-2">
-                            - Grupo: {dashboardGroupFilter === 'inicio' ? '< 1k' : dashboardGroupFilter.toUpperCase()}
-                          </span>
-                        )}
-                      </h2>
+                    <h2 className="title-section">👥 Perfis Analisados ({profiles.length})</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
-                        {filteredProfiles.map((profile, index) => {
+                      {profiles.map((profile, index) => {
                         // Atualizar sequência do perfil com a sequência global do calendário
                         const profileWithSequence = {
                           ...profile,
                           sequence: sequences['global'] || 0
                         }
-                          const isAnalyzing = analyzingProfile === profile.url
-                          
                         return (
-                            <div key={index} className="relative">
                           <ProfileCard 
+                            key={index} 
                             profileData={profileWithSequence}
                             onCheckSequence={() => handleCheckSequence(profile.url)}
                           />
-                              <button
-                                onClick={async () => {
-                                  if (!profile.url) return
-                                  
-                                  setAnalyzingProfile(profile.url)
-                                  try {
-                                    const response = await fetch('/api/analyze', {
-                                      method: 'POST',
-                                      headers: { 'Content-Type': 'application/json' },
-                                      body: JSON.stringify({ url: profile.url }),
-                                    })
-
-                                    const data = await response.json()
-
-                                    if (!response.ok) {
-                                      setError(`Erro ao analisar ${profile.url}: ${data.error || 'Erro desconhecido'}`)
-                                      return
-                                    }
-
-                                    // Buscar dados da conta correspondente (das contas cadastradas) - mesma lógica da análise geral
-                                    const usernameMatch = profile.url.match(/@([^\/\?]+)/)
-                                    const username = usernameMatch ? usernameMatch[1].toLowerCase() : ''
-                                    
-                                    // Buscar nas contas cadastradas - múltiplas estratégias
-                                    let account = null
-                                    
-                                    // Estratégia 1: Match por URL exata (mais confiável)
-                                    account = accounts.find(acc => acc.url && acc.url.toLowerCase() === profile.url.toLowerCase())
-                                    
-                                    // Estratégia 2: Match por URL normalizada (sem query params)
-                                    if (!account) {
-                                      const urlNormalized = profile.url.split('?')[0].toLowerCase()
-                                      account = accounts.find(acc => {
-                                        if (!acc.url) return false
-                                        const accUrlNormalized = acc.url.split('?')[0].toLowerCase()
-                                        return accUrlNormalized === urlNormalized
-                                      })
-                                    }
-                                    
-                                    // Estratégia 3: Match por username extraído da URL com email
-                                    if (!account && username) {
-                                      account = accounts.find(acc => {
-                                        const accEmail = acc.email.toLowerCase()
-                                        const emailUsername = accEmail.split('@')[0]
-                                        return emailUsername === username || accEmail.includes(username)
-                                      })
-                                    }
-                                    
-                                    // Se encontrou a conta, atualizar com o nome buscado (igual análise geral)
-                                    if (account) {
-                                      const accountIndex = accounts.findIndex(acc => 
-                                        acc.id === account.id || 
-                                        acc.email === account.email ||
-                                        (acc.url && account.url && acc.url === account.url)
-                                      )
-                                      
-                                      if (accountIndex >= 0) {
-                                        const updatedAccounts = [...accounts]
-                                        const extractedName = cleanDisplayName(data.displayName || data.username || '')
-                                        
-                                        // Só atualizar se houver dados extraídos válidos
-                                        if (extractedName && extractedName !== '') {
-                                          updatedAccounts[accountIndex] = {
-                                            ...updatedAccounts[accountIndex],
-                                            name: extractedName
-                                          }
-                                          setAccounts(updatedAccounts)
-                                          
-                                          // Salvar no arquivo
-                                          try {
-                                            await fetch('/api/accounts', {
-                                              method: 'POST',
-                                              headers: { 'Content-Type': 'application/json' },
-                                              body: JSON.stringify({ accounts: updatedAccounts }),
-                                            })
-                                            console.log(`✅ Conta atualizada: ${account.email} -> Nome: ${extractedName}`)
-                                          } catch (e) {
-                                            console.error('Erro ao atualizar conta:', e)
-                                          }
-                                        }
-                                      }
-                                    } else {
-                                      console.warn(`⚠️ Conta não encontrada para URL: ${profile.url}`)
-                                    }
-                                    
-                                    const updatedProfile: ProfileData = {
-                                      ...data,
-                                      url: profile.url,
-                                      email: account?.email || profile.email || '',
-                                      password: account?.password || profile.password || '',
-                                      name: account?.name || cleanDisplayName(data.displayName || data.username || '') || profile.name,
-                                      sequence: sequences['global'] || profile.sequence || 0
-                                    }
-
-                                    const updatedProfiles = profiles.map(p => 
-                                      p.url === profile.url ? updatedProfile : p
-                                    )
-                                    setProfiles(updatedProfiles)
-                                  } catch (err: any) {
-                                    setError(`Erro ao analisar ${profile.url}: ${err.message}`)
-                                  } finally {
-                                    setAnalyzingProfile(null)
-                                  }
-                                }}
-                                disabled={isAnalyzing || loading}
-                                className="absolute top-2 right-2 p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg z-10"
-                                title="Analisar individualmente"
-                              >
-                                {isAnalyzing ? (
-                                  <div className="spinner-new w-4 h-4 border-2 border-white border-t-transparent"></div>
-                                ) : (
-                                  <span>🔄</span>
-                                )}
-                              </button>
-                            </div>
                         )
                       })}
                     </div>
                   </div>
-                  )
-                })()}
+                )}
               </>
             )}
 
