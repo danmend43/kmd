@@ -2338,7 +2338,7 @@ export default function Home() {
                             const existingAccount = editingAccountIndex !== null ? accounts[editingAccountIndex] : null
                             
                             // Processar URL - usar o valor digitado (já validado acima)
-                            const urlToSave = newAccount.url.trim()
+                            const urlToSave = newAccount.url ? newAccount.url.trim() : (existingAccount?.url || '')
                             
                             // Processar name - usar o valor digitado, ou manter existente se vazio ao editar
                             const nameValue = editingAccountIndex === null 
@@ -2382,7 +2382,7 @@ export default function Home() {
                               }
                             } else {
                               // Nova conta - adicionar URL na lista de URLs
-                              if (!urls.includes(newAccount.url)) {
+                              if (newAccount.url && !urls.includes(newAccount.url)) {
                                 const updatedUrls = [...urls, newAccount.url]
                                 setUrls(updatedUrls)
                                 setUrlsOriginal(updatedUrls) // Atualizar URLs originais também
