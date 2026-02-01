@@ -117,3 +117,79 @@ export async function POST(request: NextRequest) {
   }
 }
 
+// Remover conta completamente do sistema
+export async function DELETE(request: NextRequest) {
+  const auth = verifyAuth(request)
+  if (!auth.authenticated) {
+    return auth.response!
+  }
+
+  try {
+    const { email } = await request.json()
+
+    if (!email) {
+      return NextResponse.json(
+        { error: 'Email é obrigatório' },
+        { status: 400 }
+      )
+    }
+
+    // 1. Remover de reserved-accounts.txt
+    if (existsSync(reservedAccountsFilePath)) {
+      const content = await readFile(reservedAccountsFilePath, 'utf-8')
+      const lines = content.split('\n').filter(line => line.trim() !== '')
+      
+      const filteredLines = lines.filter(line => {
+        const parts = line.split('|')
+        const lineEmail = parts[0]?.trim().toLowerCase()
+        return lineEmail !== email.toLowerCase()
+      })
+      
+      if (filteredLines.length < lines.length) {
+        const newContent = filteredLines.join('\n') + (filteredLines.length > 0 ? '\n' : '')
+        await writeFile(reservedAccountsFilePath, newContent, 'utf-8')
+      }
+    }
+
+    // 2. Remover de accounts-data.json
+    const accountsFilePath = path.join(process.cwd(), 'public', 'accounts-data.json')
+    if (existsSync(accountsFilePath)) {
+      const accountsContent = await readFile(accountsFilePath, 'utf-8')
+      const accountsData = JSON.parse(accountsContent)
+      const accounts = accountsData.accounts || []
+      
+      const filteredAccounts = accounts.filter((acc: AccountData) => 
+        (acc.email || '').toLowerCase() !== email.toLowerCase()
+      )
+      
+      if (filteredAccounts.length < accounts.length) {
+        // Reajustar IDs sequencialmente
+        const reindexedAccounts = filteredAccounts.map((acc: AccountData, idx: number) => ({
+          ...acc,
+          id: String(idx + 1)
+        }))
+        
+        const updatedData = {
+          accounts: reindexedAccounts,
+          lastUpdated: new Date().toISOString()
+        }
+        
+        await writeFile(accountsFilePath, JSON.stringify(updatedData, null, 2), 'utf-8')
+      }
+    }
+
+    return NextResponse.json({ 
+      success: true, 
+      message: 'Conta removida completamente do sistema',
+      email
+    })
+  } catch (error: any) {
+    console.error('Erro ao remover conta:', error)
+    return NextResponse.json(
+      { error: `Erro ao remover conta: ${error.message}` },
+      { status: 500 }
+    )
+  }
+}
+
+

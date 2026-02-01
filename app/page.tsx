@@ -3077,16 +3077,81 @@ export default function Home() {
                                 )}
                               </td>
                               <td className="px-4 py-3 text-sm">
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    handleUnreserveAccount()
-                                  }}
-                                  className="px-3 py-1 bg-green-500 text-white text-xs font-semibold rounded hover:bg-green-600 transition-colors"
-                                  title="Retirar conta (voltar para contas normais)"
-                                >
-                                  ↪️ Retirar
-                                </button>
+                                <div className="flex gap-2">
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      handleUnreserveAccount()
+                                    }}
+                                    className="px-3 py-1 bg-green-500 text-white text-xs font-semibold rounded hover:bg-green-600 transition-colors"
+                                    title="Retirar conta (voltar para contas normais)"
+                                  >
+                                    ↪️ Retirar
+                                  </button>
+                                  <button
+                                    onClick={async (e) => {
+                                      e.stopPropagation()
+                                      if (confirm(`⚠️ ATENÇÃO: Tem certeza que deseja REMOVER COMPLETAMENTE esta conta do sistema?\n\nEmail: ${account.email}\n\nEsta ação não pode ser desfeita!`)) {
+                                        try {
+                                          const response = await fetch('/api/reserved-accounts', {
+                                            method: 'DELETE',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({ email: account.email }),
+                                          })
+                                          
+                                          if (response.ok) {
+                                            // Recarregar contas do servidor
+                                            const accountsResponse = await fetch('/api/accounts')
+                                            if (accountsResponse.ok) {
+                                              const accountsData = await accountsResponse.json()
+                                              const accountsList = accountsData.accounts || []
+                                              
+                                              // Carregar contas reservadas para marcar flags
+                                              const reservedResponse = await fetch('/api/reserved-accounts')
+                                              if (reservedResponse.ok) {
+                                                const reservedData = await reservedResponse.json()
+                                                const reservedEmails = new Set(
+                                                  (reservedData.accounts || []).map((r: any) => 
+                                                    (r.email || '').toLowerCase()
+                                                  )
+                                                )
+                                                
+                                                // Marcar contas como reserved baseado no arquivo reserved-accounts.txt
+                                                const updatedAccounts = accountsList.map((acc: AccountData) => ({
+                                                  ...acc,
+                                                  reserved: reservedEmails.has((acc.email || '').toLowerCase()),
+                                                  hidden: acc.hidden !== undefined ? acc.hidden : false
+                                                }))
+                                                
+                                                setAccounts(updatedAccounts)
+                                              } else {
+                                                // Se não conseguir carregar reservadas, apenas atualizar sem flag reserved
+                                                const updatedAccounts = accountsList.map((acc: AccountData) => ({
+                                                  ...acc,
+                                                  reserved: false,
+                                                  hidden: acc.hidden !== undefined ? acc.hidden : false
+                                                }))
+                                                setAccounts(updatedAccounts)
+                                              }
+                                            }
+                                            
+                                            alert('Conta removida completamente do sistema!')
+                                          } else {
+                                            const errorData = await response.json()
+                                            alert(`Erro ao remover conta: ${errorData.error || 'Erro desconhecido'}`)
+                                          }
+                                        } catch (error) {
+                                          console.error('Erro ao remover conta:', error)
+                                          alert('Erro ao remover conta. Tente novamente.')
+                                        }
+                                      }
+                                    }}
+                                    className="px-3 py-1 bg-red-500 text-white text-xs font-semibold rounded hover:bg-red-600 transition-colors"
+                                    title="Remover completamente do sistema"
+                                  >
+                                    🗑️ Remover
+                                  </button>
+                                </div>
                               </td>
                             </tr>
                           )
@@ -3293,6 +3358,68 @@ export default function Home() {
                           className="btn-new btn-success-new flex-1"
                         >
                           ↪️ Retirar da Reserva
+                        </button>
+                        <button
+                          onClick={async () => {
+                            if (confirm(`⚠️ ATENÇÃO: Tem certeza que deseja REMOVER COMPLETAMENTE esta conta do sistema?\n\nEmail: ${selectedReservedAccount.email}\n\nEsta ação não pode ser desfeita!`)) {
+                              try {
+                                const response = await fetch('/api/reserved-accounts', {
+                                  method: 'DELETE',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ email: selectedReservedAccount.email }),
+                                })
+                                
+                                if (response.ok) {
+                                  // Recarregar contas do servidor
+                                  const accountsResponse = await fetch('/api/accounts')
+                                  if (accountsResponse.ok) {
+                                    const accountsData = await accountsResponse.json()
+                                    const accountsList = accountsData.accounts || []
+                                    
+                                    // Carregar contas reservadas para marcar flags
+                                    const reservedResponse = await fetch('/api/reserved-accounts')
+                                    if (reservedResponse.ok) {
+                                      const reservedData = await reservedResponse.json()
+                                      const reservedEmails = new Set(
+                                        (reservedData.accounts || []).map((r: any) => 
+                                          (r.email || '').toLowerCase()
+                                        )
+                                      )
+                                      
+                                      // Marcar contas como reserved baseado no arquivo reserved-accounts.txt
+                                      const updatedAccounts = accountsList.map((acc: AccountData) => ({
+                                        ...acc,
+                                        reserved: reservedEmails.has((acc.email || '').toLowerCase()),
+                                        hidden: acc.hidden !== undefined ? acc.hidden : false
+                                      }))
+                                      
+                                      setAccounts(updatedAccounts)
+                                    } else {
+                                      // Se não conseguir carregar reservadas, apenas atualizar sem flag reserved
+                                      const updatedAccounts = accountsList.map((acc: AccountData) => ({
+                                        ...acc,
+                                        reserved: false,
+                                        hidden: acc.hidden !== undefined ? acc.hidden : false
+                                      }))
+                                      setAccounts(updatedAccounts)
+                                    }
+                                  }
+                                  
+                                  setSelectedReservedAccount(null)
+                                  alert('Conta removida completamente do sistema!')
+                                } else {
+                                  const errorData = await response.json()
+                                  alert(`Erro ao remover conta: ${errorData.error || 'Erro desconhecido'}`)
+                                }
+                              } catch (error) {
+                                console.error('Erro ao remover conta:', error)
+                                alert('Erro ao remover conta. Tente novamente.')
+                              }
+                            }
+                          }}
+                          className="btn-new bg-red-500 hover:bg-red-600 text-white flex-1"
+                        >
+                          🗑️ Remover do Sistema
                         </button>
                         <button
                           onClick={() => setSelectedReservedAccount(null)}

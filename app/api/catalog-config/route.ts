@@ -81,6 +81,32 @@ async function getLastHistoryDate(): Promise<string | null> {
   }
 }
 
+// Função para carregar contas reservadas
+async function loadReservedAccounts(): Promise<Set<string>> {
+  try {
+    const reservedAccountsFilePath = path.join(process.cwd(), 'public', 'reserved-accounts.txt')
+    if (!existsSync(reservedAccountsFilePath)) {
+      return new Set()
+    }
+
+    const content = await readFile(reservedAccountsFilePath, 'utf-8')
+    const lines = content.split('\n').filter(line => line.trim() !== '')
+    
+    const reservedEmails = new Set<string>()
+    lines.forEach(line => {
+      const parts = line.split('|')
+      if (parts.length >= 1 && parts[0]?.trim()) {
+        reservedEmails.add(parts[0].trim().toLowerCase())
+      }
+    })
+    
+    return reservedEmails
+  } catch (error: any) {
+    console.error('Erro ao carregar contas reservadas:', error)
+    return new Set()
+  }
+}
+
 // Função para carregar perfis do histórico
 async function loadProfilesFromHistory(): Promise<any[]> {
   try {
@@ -113,47 +139,72 @@ async function loadProfilesFromHistory(): Promise<any[]> {
       accounts = accountsData.accounts || []
     }
 
-    // Converter e associar IDs
-    return jsonData.map((item: any, index: number) => {
-      let matchingAccount = null
-      const profileEmail = (item.email || '').toLowerCase().trim()
-      const profileName = (item.displayName || item.name || item.username || '').toLowerCase().trim()
-      
-      // Buscar conta correspondente
-      if (profileEmail && accounts.length > 0) {
-        matchingAccount = accounts.find(acc => {
-          const accEmail = (acc.email || '').toLowerCase().trim()
-          return accEmail && accEmail === profileEmail
-        })
-      }
-      
-      if (!matchingAccount && profileName && accounts.length > 0) {
-        matchingAccount = accounts.find(acc => {
-          const accName = (acc.name || '').toLowerCase().trim()
-          return accName && accName === profileName
-        })
-      }
-      
-      if (!matchingAccount && accounts.length > 0 && index < accounts.length) {
-        matchingAccount = accounts[index]
-      }
+    // Carregar contas reservadas
+    const reservedEmails = await loadReservedAccounts()
 
-      let avatarUrl = item.avatar || ''
-      if (avatarUrl && avatarUrl.startsWith('http://')) {
-        avatarUrl = avatarUrl.replace('http://', 'https://')
-      }
+    // Converter e associar IDs, filtrando contas reservadas
+    return jsonData
+      .map((item: any, index: number) => {
+        let matchingAccount = null
+        const profileEmail = (item.email || '').toLowerCase().trim()
+        const profileName = (item.displayName || item.name || item.username || '').toLowerCase().trim()
+        
+        // Verificar se é conta reservada
+        if (profileEmail && reservedEmails.has(profileEmail)) {
+          return null // Marcar para filtrar depois
+        }
+        
+        // Buscar conta correspondente
+        if (profileEmail && accounts.length > 0) {
+          matchingAccount = accounts.find(acc => {
+            const accEmail = (acc.email || '').toLowerCase().trim()
+            return accEmail && accEmail === profileEmail
+          })
+        }
+        
+        // Verificar se a conta encontrada está marcada como reservada
+        if (matchingAccount?.reserved) {
+          return null // Marcar para filtrar depois
+        }
+        
+        if (!matchingAccount && profileName && accounts.length > 0) {
+          matchingAccount = accounts.find(acc => {
+            const accName = (acc.name || '').toLowerCase().trim()
+            return accName && accName === profileName
+          })
+          
+          // Verificar novamente se está reservada
+          if (matchingAccount?.reserved) {
+            return null // Marcar para filtrar depois
+          }
+        }
+        
+        if (!matchingAccount && accounts.length > 0 && index < accounts.length) {
+          matchingAccount = accounts[index]
+          
+          // Verificar novamente se está reservada
+          if (matchingAccount?.reserved) {
+            return null // Marcar para filtrar depois
+          }
+        }
 
-      return {
-        email: item.email || '',
-        displayName: item.displayName || item.name || item.username || '',
-        avatar: avatarUrl,
-        followers: item.followers || '0',
-        likes: item.likes || '0',
-        url: item.url || '',
-        username: item.username || '',
-        id: matchingAccount?.id || '',
-      }
-    })
+        let avatarUrl = item.avatar || ''
+        if (avatarUrl && avatarUrl.startsWith('http://')) {
+          avatarUrl = avatarUrl.replace('http://', 'https://')
+        }
+
+        return {
+          email: item.email || '',
+          displayName: item.displayName || item.name || item.username || '',
+          avatar: avatarUrl,
+          followers: item.followers || '0',
+          likes: item.likes || '0',
+          url: item.url || '',
+          username: item.username || '',
+          id: matchingAccount?.id || '',
+        }
+      })
+      .filter((profile: any) => profile !== null) // Remover contas reservadas
   } catch (error: any) {
     console.error('Erro ao carregar perfis do histórico:', error)
     return []
